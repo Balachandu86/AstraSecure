@@ -13,3 +13,6 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Windsurf AI ignore files (personal, not committed to main)
+.windsurfignore
