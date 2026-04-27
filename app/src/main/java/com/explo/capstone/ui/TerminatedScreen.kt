@@ -5,11 +5,14 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -21,7 +24,7 @@ import androidx.compose.ui.unit.sp
  * No navigation out — this is a terminal state until OS Clear Data is performed.
  */
 @Composable
-fun TerminatedScreen() {
+fun TerminatedScreen(onUninstall: () -> Unit = {}) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -95,6 +98,28 @@ fun TerminatedScreen() {
                 ),
                 textAlign = TextAlign.Center,
             )
+
+            Spacer(Modifier.height(8.dp))
+
+            Button(
+                onClick = onUninstall,
+                modifier = Modifier.fillMaxWidth().height(44.dp),
+                shape = RectangleShape,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = AstraTheme.Error.copy(alpha = 0.15f),
+                    contentColor = AstraTheme.Error,
+                ),
+            ) {
+                Text(
+                    "> UNINSTALL APP",
+                    style = AstraTheme.Typography.labelSmall.copy(
+                        color = AstraTheme.Error,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.sp,
+                        fontFamily = FontFamily.Monospace,
+                    ),
+                )
+            }
         }
     }
 }

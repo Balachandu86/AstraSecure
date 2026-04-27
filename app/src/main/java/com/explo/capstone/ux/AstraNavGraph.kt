@@ -1,6 +1,11 @@
 package com.explo.capstone.ux
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -39,7 +44,22 @@ fun AstraNavGraph(
     NavHost(navController, startDestination) {
         // ─── Terminated (post-wipe, no exit) ─────────────────────────────
         composable("terminated") {
-            TerminatedScreen()
+            val context = LocalContext.current
+            TerminatedScreen(
+                onUninstall = {
+                    // ACTION_DELETE is unreliable on emulators; fall back to App Info which
+                    // always surfaces the Uninstall button regardless of device/API level.
+                    val deleteIntent = Intent(Intent.ACTION_DELETE,
+                        Uri.fromParts("package", context.packageName, null))
+                    try {
+                        context.startActivity(deleteIntent)
+                    } catch (_: ActivityNotFoundException) {
+                        val settingsIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.fromParts("package", context.packageName, null))
+                        context.startActivity(settingsIntent)
+                    }
+                }
+            )
         }
 
         // ─── Provisioning (first-launch only, no app shell) ──────────────

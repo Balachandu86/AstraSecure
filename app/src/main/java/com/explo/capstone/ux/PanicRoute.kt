@@ -1,10 +1,13 @@
 package com.explo.capstone.ux
 
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
+import android.provider.Settings
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
@@ -63,19 +66,19 @@ fun PanicRoute(container: AppContainer, selectedTab: NavTab, onTabSelect: (NavTa
     val state by vm.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    // Launch uninstall prompt once the device reaches Tombstoned state
-    LaunchedEffect(state) {
-        if (state is PanicUiState.Tombstoned) {
-            runCatching {
-                val intent = Intent(Intent.ACTION_DELETE, Uri.parse("package:${context.packageName}"))
-                context.startActivity(intent)
-            }
-        }
-    }
-
     AstraAppShell(selectedTab = selectedTab, onTabSelect = onTabSelect) { padding ->
         Box(Modifier.padding(padding)) {
-            PanicContent(state) { vm.handle(it) }
+            PanicContent(state, onUninstall = {
+                val deleteIntent = Intent(Intent.ACTION_DELETE,
+                    Uri.fromParts("package", context.packageName, null))
+                try {
+                    context.startActivity(deleteIntent)
+                } catch (_: ActivityNotFoundException) {
+                    val settingsIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        Uri.fromParts("package", context.packageName, null))
+                    context.startActivity(settingsIntent)
+                }
+            }) { vm.handle(it) }
         }
     }
 }

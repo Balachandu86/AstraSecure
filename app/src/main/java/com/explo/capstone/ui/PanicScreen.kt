@@ -47,11 +47,11 @@ sealed interface PanicIntent {
 // ─── Screen ──────────────────────────────────────────────────────────────────
 
 @Composable
-fun PanicContent(state: PanicUiState, onIntent: (PanicIntent) -> Unit) {
+fun PanicContent(state: PanicUiState, onUninstall: () -> Unit = {}, onIntent: (PanicIntent) -> Unit) {
     when (state) {
         is PanicUiState.Standby -> PanicStandby(onIntent)
         is PanicUiState.Wiping -> PanicWiping(state)
-        is PanicUiState.Tombstoned -> PanicTombstoned()
+        is PanicUiState.Tombstoned -> PanicTombstoned(onUninstall)
     }
 }
 
@@ -191,7 +191,7 @@ private fun PanicWiping(state: PanicUiState.Wiping) {
 }
 
 @Composable
-private fun PanicTombstoned() {
+private fun PanicTombstoned(onUninstall: () -> Unit) {
     Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
             Text("> PURGE COMPLETE", style = AstraTheme.Typography.headlineSmall.copy(color = AstraTheme.Error, fontSize = 20.sp, fontWeight = FontWeight.Black, letterSpacing = 4.sp))
@@ -200,6 +200,18 @@ private fun PanicTombstoned() {
             Spacer(Modifier.height(20.dp))
             Text("To use AstraSecure again:\n  1. Uninstall this app (recommended)\n  2. Settings → Apps → Clear data",
                 style = AstraTheme.Typography.labelSmall.copy(color = Color(0xFFACABAA).copy(0.5f), fontSize = 10.sp, fontFamily = FontFamily.Monospace), textAlign = TextAlign.Start)
+            Spacer(Modifier.height(24.dp))
+            androidx.compose.material3.Button(
+                onClick = onUninstall,
+                modifier = Modifier.fillMaxWidth().height(44.dp),
+                shape = androidx.compose.ui.graphics.RectangleShape,
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                    containerColor = AstraTheme.Error.copy(0.15f),
+                    contentColor = AstraTheme.Error,
+                ),
+            ) {
+                Text("> UNINSTALL APP", style = AstraTheme.Typography.labelSmall.copy(color = AstraTheme.Error, fontWeight = FontWeight.Bold, fontSize = 10.sp, fontFamily = FontFamily.Monospace))
+            }
         }
     }
 }
