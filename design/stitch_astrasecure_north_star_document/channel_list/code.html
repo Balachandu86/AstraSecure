@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AstraSecure // Channel Operations</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-error": "#490106",
+              "on-primary-container": "#c0d2eb",
+              "primary-container": "#37485d",
+              "primary-dim": "#a9bad3",
+              "surface-container-high": "#1f2020",
+              "primary": "#b6c8e1",
+              "secondary-container": "#513600",
+              "surface-container-highest": "#252626",
+              "on-surface": "#e7e5e4",
+              "on-primary": "#314156",
+              "on-error-container": "#ff9993",
+              "tertiary-container": "#9df197",
+              "tertiary-fixed-dim": "#90e28a",
+              "error-dim": "#bb5551",
+              "on-secondary-fixed": "#563a00",
+              "secondary": "#feb300",
+              "on-background": "#e7e5e4",
+              "tertiary": "#acffa4",
+              "secondary-fixed": "#ffdeac",
+              "error-container": "#7f2927",
+              "on-tertiary-fixed": "#00460e",
+              "tertiary-dim": "#90e28a",
+              "primary-fixed-dim": "#c4d6f0",
+              "surface-container-lowest": "#000000",
+              "surface-variant": "#252626",
+              "inverse-surface": "#fcf8f8",
+              "surface-container-low": "#131313",
+              "surface": "#0e0e0e",
+              "on-secondary-fixed-variant": "#7b5400",
+              "on-secondary-container": "#fcb100",
+              "inverse-on-surface": "#565554",
+              "error": "#ee7d77",
+              "primary-fixed": "#d2e4fe",
+              "on-secondary": "#523700",
+              "background": "#0e0e0e",
+              "on-primary-fixed": "#304055",
+              "surface-dim": "#0e0e0e",
+              "on-tertiary": "#10651d",
+              "surface-tint": "#b6c8e1",
+              "on-tertiary-container": "#005c15",
+              "outline-variant": "#484848",
+              "tertiary-fixed": "#9df197",
+              "on-tertiary-fixed-variant": "#12661e",
+              "secondary-fixed-dim": "#ffcc7a",
+              "on-primary-fixed-variant": "#4c5d73",
+              "on-surface-variant": "#acabaa",
+              "surface-bright": "#2c2c2c",
+              "surface-container": "#191a1a",
+              "outline": "#767575",
+              "inverse-primary": "#4f6076",
+              "secondary-dim": "#eda600"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0px", "lg": "0px", "xl": "0px", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .flicker-on {
+            animation: flicker 0.15s ease-in-out;
+        }
+        @keyframes flicker {
+            0% { opacity: 0.2; }
+            100% { opacity: 1; }
+        }
+        body {
+            background-color: #0e0e0e;
+            color: #e7e5e4;
+            font-family: 'Inter', sans-serif;
+        }
+        .scanline-overlay {
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 100, 0.06));
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopAppBar -->
+<header class="bg-[#0e0e0e] flex justify-between items-center w-full px-6 py-4 fixed top-0 z-50 border-b border-[#484848]/15">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-[#b6c8e1]" data-icon="security">security</span>
+<h1 class="font-['Space_Grotesk'] tracking-widest text-lg md:text-xl uppercase font-black text-[#b6c8e1]">ASTRA // SECURE</h1>
+</div>
+<div class="flex items-center gap-3">
+<div class="hidden md:flex flex-col items-end mr-2">
+<span class="font-['Space_Grotesk'] text-[10px] font-bold text-[#acffa4] tracking-widest uppercase">CONNECTION SECURE</span>
+<span class="font-['Space_Grotesk'] text-[9px] text-[#6A7B92] uppercase">ID: ALPHA-9-VULCAN</span>
+</div>
+<div class="w-10 h-10 bg-surface-container-highest border border-outline-variant/30 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary-dim" data-icon="person">person</span>
+</div>
+</div>
+</header>
+<main class="pt-20 pb-24 min-h-screen">
+<!-- Mission Header & Breadcrumbs -->
+<section class="px-6 py-4 bg-surface-container-low border-b border-outline-variant/10">
+<nav class="flex items-center gap-2 mb-2">
+<span class="font-label text-[10px] text-on-surface-variant uppercase tracking-tighter">Missions</span>
+<span class="material-symbols-outlined text-[14px] text-outline" data-icon="chevron_right">chevron_right</span>
+<span class="font-label text-[10px] text-primary uppercase tracking-tighter">Current Op</span>
+</nav>
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div>
+<h2 class="font-headline text-2xl md:text-4xl font-bold uppercase tracking-tight text-on-surface">Operation Silent Sentinel</h2>
+<p class="font-label text-xs text-on-surface-variant flex items-center gap-2 mt-1">
+<span class="w-2 h-2 bg-tertiary rounded-full animate-pulse"></span>
+                        LIVE MISSION STATUS: PHASE 4 / EXTRACTION
+                    </p>
+</div>
+<div class="flex gap-2">
+<button class="bg-surface-container-highest text-primary px-3 py-2 text-[10px] font-bold uppercase tracking-widest border border-outline-variant/20 hover:bg-[#131313] transition-colors duration-100 flex items-center gap-2">
+<span class="material-symbols-outlined text-xs" data-icon="settings_input_component">settings_input_component</span>
+                        Console
+                    </button>
+<button class="bg-primary text-on-primary px-4 py-2 text-[10px] font-bold uppercase tracking-widest hover:brightness-110 transition-all duration-75 flex items-center gap-2">
+<span class="material-symbols-outlined text-xs" data-icon="add">add</span>
+                        New Intel
+                    </button>
+</div>
+</div>
+</section>
+<!-- Channel Navigation Density Grid -->
+<div class="px-6 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+<!-- Left Sidebar Navigation (Desktop) -->
+<aside class="hidden lg:block lg:col-span-3 space-y-6">
+<div class="bg-surface-container-low p-4 border-l-2 border-primary">
+<h3 class="font-headline text-[11px] font-black text-primary-dim tracking-widest uppercase mb-4">DEPLOYMENT ASSETS</h3>
+<div class="space-y-4">
+<div class="flex items-center justify-between">
+<span class="font-label text-[10px] text-on-surface-variant uppercase">UAV Feed</span>
+<span class="text-[10px] text-tertiary uppercase font-bold">Active</span>
+</div>
+<div class="flex items-center justify-between">
+<span class="font-label text-[10px] text-on-surface-variant uppercase">E2EE Protocol</span>
+<span class="text-[10px] text-tertiary uppercase font-bold">Verified</span>
+</div>
+<div class="w-full bg-surface-container-lowest h-[2px]">
+<div class="bg-primary w-2/3 h-full"></div>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-low p-4">
+<h3 class="font-headline text-[11px] font-black text-on-surface-variant tracking-widest uppercase mb-4">ACTIVE OPERATIVES</h3>
+<div class="space-y-3">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 bg-tertiary rounded-full"></div>
+<span class="text-xs font-mono text-on-surface">V_STRIKER</span>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 bg-tertiary rounded-full"></div>
+<span class="text-xs font-mono text-on-surface">GHOST_WALKER</span>
+</div>
+<div class="flex items-center gap-3 opacity-40">
+<div class="w-2 h-2 bg-outline rounded-full"></div>
+<span class="text-xs font-mono text-on-surface">IRON_CLAD</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- Channel List Content -->
+<section class="lg:col-span-9 space-y-8">
+<!-- Category: Command -->
+<div class="space-y-2">
+<div class="flex items-center gap-2 px-2">
+<span class="material-symbols-outlined text-sm text-secondary" data-icon="admin_panel_settings">admin_panel_settings</span>
+<h4 class="font-headline text-xs font-bold text-secondary uppercase tracking-[0.2em]">Command &amp; Control // ADMIN ONLY</h4>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-[1px] bg-outline-variant/20">
+<!-- Channel Item -->
+<div class="bg-surface-container-low p-4 hover:bg-surface-container-high transition-colors cursor-pointer group flex justify-between items-center">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary-dim group-hover:text-primary" data-icon="key">key</span>
+<div>
+<div class="text-sm font-bold tracking-tight text-on-surface uppercase font-headline">overwatch-hq</div>
+<div class="text-[10px] text-on-surface-variant uppercase mt-1">Strategic command &amp; clearance</div>
+</div>
+</div>
+<div class="text-right">
+<span class="text-[10px] font-mono text-primary bg-primary/10 px-2 py-0.5">3 OPERS</span>
+</div>
+</div>
+<!-- Channel Item -->
+<div class="bg-surface-container-low p-4 hover:bg-surface-container-high transition-colors cursor-pointer group flex justify-between items-center">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary-dim group-hover:text-primary" data-icon="gavel">gavel</span>
+<div>
+<div class="text-sm font-bold tracking-tight text-on-surface uppercase font-headline">authorization-logs</div>
+<div class="text-[10px] text-on-surface-variant uppercase mt-1">Audit trail for mission overrides</div>
+</div>
+</div>
+<div class="text-right">
+<span class="text-[10px] font-mono text-on-surface-variant">SECURE</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Category: Recon & Intel -->
+<div class="space-y-2">
+<div class="flex items-center gap-2 px-2">
+<span class="material-symbols-outlined text-sm text-primary" data-icon="radar">radar</span>
+<h4 class="font-headline text-xs font-bold text-primary uppercase tracking-[0.2em]">Reconnaissance &amp; Intelligence</h4>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-[1px] bg-outline-variant/20">
+<!-- Active Channel -->
+<div class="bg-surface-container-highest p-4 border-l-2 border-tertiary cursor-pointer group flex justify-between items-center relative overflow-hidden">
+<div class="absolute inset-0 bg-tertiary/5 pointer-events-none"></div>
+<div class="flex items-center gap-4 relative z-10">
+<span class="material-symbols-outlined text-tertiary" data-icon="visibility" data-weight="fill" style="font-variation-settings: 'FILL' 1;">visibility</span>
+<div>
+<div class="text-sm font-bold tracking-tight text-on-surface uppercase font-headline">field-intel-live</div>
+<div class="text-[10px] text-tertiary uppercase mt-1">12 New transmissions incoming</div>
+</div>
+</div>
+<div class="text-right relative z-10">
+<span class="text-[10px] font-mono text-on-primary bg-tertiary px-2 py-0.5 font-bold">NEW</span>
+</div>
+</div>
+<!-- Channel Item -->
+<div class="bg-surface-container-low p-4 hover:bg-surface-container-high transition-colors cursor-pointer group flex justify-between items-center">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary-dim group-hover:text-primary" data-icon="satellite_alt">satellite_alt</span>
+<div>
+<div class="text-sm font-bold tracking-tight text-on-surface uppercase font-headline">sat-imagery</div>
+<div class="text-[10px] text-on-surface-variant uppercase mt-1">Phase 4 grid coordinates</div>
+</div>
+</div>
+<div class="text-right">
+<span class="text-[10px] font-mono text-on-surface-variant">24 OPERS</span>
+</div>
+</div>
+<!-- Channel Item -->
+<div class="bg-surface-container-low p-4 hover:bg-surface-container-high transition-colors cursor-pointer group flex justify-between items-center">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary-dim group-hover:text-primary" data-icon="radio">radio</span>
+<div>
+<div class="text-sm font-bold tracking-tight text-on-surface uppercase font-headline">signal-intercepts</div>
+<div class="text-[10px] text-on-surface-variant uppercase mt-1">Hostile comms decryption</div>
+</div>
+</div>
+<div class="text-right">
+<span class="text-[10px] font-mono text-on-surface-variant">8 OPERS</span>
+</div>
+</div>
+<!-- Channel Item -->
+<div class="bg-surface-container-low p-4 hover:bg-surface-container-high transition-colors cursor-pointer group flex justify-between items-center">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary-dim group-hover:text-primary" data-icon="folder_managed">folder_managed</span>
+<div>
+<div class="text-sm font-bold tracking-tight text-on-surface uppercase font-headline">secure-files</div>
+<div class="text-[10px] text-on-surface-variant uppercase mt-1">Target dossiers &amp; blueprints</div>
+</div>
+</div>
+<div class="text-right">
+<span class="material-symbols-outlined text-xs text-outline" data-icon="lock">lock</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Category: Logistics -->
+<div class="space-y-2">
+<div class="flex items-center gap-2 px-2">
+<span class="material-symbols-outlined text-sm text-on-surface-variant" data-icon="local_shipping">local_shipping</span>
+<h4 class="font-headline text-xs font-bold text-on-surface-variant uppercase tracking-[0.2em]">Logistics &amp; Deployment</h4>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[1px] bg-outline-variant/20">
+<div class="bg-surface-container-low p-3 hover:bg-surface-container-high transition-colors cursor-pointer group">
+<div class="flex items-center gap-3 mb-2">
+<span class="material-symbols-outlined text-primary-dim text-sm" data-icon="medical_services">medical_services</span>
+<span class="text-xs font-bold uppercase font-headline">med-evac-status</span>
+</div>
+<div class="text-[9px] text-on-surface-variant leading-tight">Emergency extraction protocols and medical standby.</div>
+</div>
+<div class="bg-surface-container-low p-3 hover:bg-surface-container-high transition-colors cursor-pointer group">
+<div class="flex items-center gap-3 mb-2">
+<span class="material-symbols-outlined text-primary-dim text-sm" data-icon="inventory">inventory</span>
+<span class="text-xs font-bold uppercase font-headline">supply-drops</span>
+</div>
+<div class="text-[9px] text-on-surface-variant leading-tight">Resource allocation and equipment replenishment scheduling.</div>
+</div>
+<div class="bg-surface-container-low p-3 hover:bg-surface-container-high transition-colors cursor-pointer group">
+<div class="flex items-center gap-3 mb-2">
+<span class="material-symbols-outlined text-primary-dim text-sm" data-icon="campaign">campaign</span>
+<span class="text-xs font-bold uppercase font-headline">announcements</span>
+</div>
+<div class="text-[9px] text-on-surface-variant leading-tight">General mission updates (Read-Only access).</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 flex justify-around items-center px-0 py-2 bg-[#0e0e0e] border-t border-[#484848]/15 md:hidden">
+<a class="flex flex-col items-center justify-center bg-[#252626] text-[#b6c8e1] rounded-none p-3 scale-95 transition-transform duration-75" href="#">
+<span class="material-symbols-outlined" data-icon="assignment">assignment</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-bold tracking-[0.1em] uppercase mt-1">MISSIONS</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#6A7B92] p-3 hover:bg-[#131313] transition-colors duration-100" href="#">
+<span class="material-symbols-outlined" data-icon="verified_user">verified_user</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-bold tracking-[0.1em] uppercase mt-1">SECURITY</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#6A7B92] p-3 hover:bg-[#131313] transition-colors duration-100" href="#">
+<span class="material-symbols-outlined" data-icon="construction">construction</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-bold tracking-[0.1em] uppercase mt-1">TOOLS</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#6A7B92] p-3 hover:bg-[#131313] transition-colors duration-100" href="#">
+<span class="material-symbols-outlined" data-icon="emergency_home">emergency_home</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-bold tracking-[0.1em] uppercase mt-1">PANIC</span>
+</a>
+</nav>
+<!-- Desktop Persistent Footer / Status Bar -->
+<footer class="hidden md:flex fixed bottom-0 w-full bg-[#0e0e0e] border-t border-[#484848]/15 px-6 py-3 justify-between items-center z-50">
+<div class="flex gap-8">
+<div class="flex flex-col">
+<span class="text-[9px] text-outline font-black tracking-widest uppercase">ENCRYPTION</span>
+<span class="text-[10px] text-tertiary font-mono">AES-512-GCM ACTIVE</span>
+</div>
+<div class="flex flex-col">
+<span class="text-[9px] text-outline font-black tracking-widest uppercase">BANDWIDTH</span>
+<span class="text-[10px] text-on-surface font-mono">1.4 GBPS // STABLE</span>
+</div>
+<div class="flex flex-col">
+<span class="text-[9px] text-outline font-black tracking-widest uppercase">LATENCY</span>
+<span class="text-[10px] text-on-surface font-mono">42ms [VULCAN-NODE]</span>
+</div>
+</div>
+<div class="flex gap-4">
+<div class="flex items-center gap-4 bg-surface-container-low px-4 py-1">
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 bg-tertiary rounded-full"></span>
+<span class="font-['Space_Grotesk'] text-[10px] font-bold text-[#b6c8e1] tracking-[0.1em] uppercase">MISSIONS</span>
+</div>
+<div class="flex items-center gap-2 opacity-50">
+<span class="font-['Space_Grotesk'] text-[10px] font-bold text-[#6A7B92] tracking-[0.1em] uppercase">SECURITY</span>
+</div>
+<div class="flex items-center gap-2 opacity-50">
+<span class="font-['Space_Grotesk'] text-[10px] font-bold text-[#6A7B92] tracking-[0.1em] uppercase">TOOLS</span>
+</div>
+</div>
+<button class="bg-error-container text-on-error-container px-4 py-1 text-[10px] font-bold uppercase tracking-[0.2em] border border-error-dim/20">
+                PANIC / KILLSWITCH
+            </button>
+</div>
+</footer>
+<div class="scanline-overlay fixed inset-0 z-[100] opacity-10 pointer-events-none"></div>
+</body></html>

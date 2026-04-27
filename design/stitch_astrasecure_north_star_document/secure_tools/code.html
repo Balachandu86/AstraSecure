@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SECURE_TOOLS_V4.0 | OPERATIONAL_DASHBOARD</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;900&amp;family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-surface-variant": "#acabaa",
+                        "error-container": "#7f2927",
+                        "on-tertiary-fixed": "#00460e",
+                        "secondary-dim": "#eda600",
+                        "on-secondary": "#523700",
+                        "tertiary-container": "#9df197",
+                        "on-secondary-fixed-variant": "#7b5400",
+                        "surface-variant": "#252626",
+                        "error": "#ee7d77",
+                        "error-dim": "#bb5551",
+                        "secondary-fixed-dim": "#ffcc7a",
+                        "inverse-on-surface": "#565554",
+                        "secondary-container": "#513600",
+                        "secondary-fixed": "#ffdeac",
+                        "on-tertiary-container": "#005c15",
+                        "on-primary": "#314156",
+                        "on-primary-fixed": "#304055",
+                        "primary-fixed": "#d2e4fe",
+                        "inverse-primary": "#4f6076",
+                        "on-primary-fixed-variant": "#4c5d73",
+                        "inverse-surface": "#fcf8f8",
+                        "primary-fixed-dim": "#c4d6f0",
+                        "surface-container-low": "#131313",
+                        "on-secondary-container": "#fcb100",
+                        "secondary": "#feb300",
+                        "primary-dim": "#a9bad3",
+                        "on-surface": "#e7e5e4",
+                        "on-secondary-fixed": "#563a00",
+                        "surface-dim": "#0e0e0e",
+                        "primary-container": "#37485d",
+                        "background": "#0e0e0e",
+                        "surface-container-lowest": "#000000",
+                        "surface": "#0e0e0e",
+                        "tertiary": "#acffa4",
+                        "tertiary-fixed": "#9df197",
+                        "primary": "#b6c8e1",
+                        "on-error-container": "#ff9993",
+                        "surface-container-highest": "#252626",
+                        "tertiary-fixed-dim": "#90e28a",
+                        "outline": "#767575",
+                        "on-primary-container": "#c0d2eb",
+                        "surface-tint": "#b6c8e1",
+                        "surface-container": "#191a1a",
+                        "surface-bright": "#2c2c2c",
+                        "on-tertiary": "#10651d",
+                        "outline-variant": "#484848",
+                        "on-error": "#490106",
+                        "on-tertiary-fixed-variant": "#12661e",
+                        "tertiary-dim": "#90e28a",
+                        "surface-container-high": "#1f2020",
+                        "on-background": "#e7e5e4"
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: { "DEFAULT": "0px", "lg": "0px", "xl": "0px", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .flicker-on {
+            animation: flicker 0.15s ease-in-out;
+        }
+        @keyframes flicker {
+            0% { opacity: 0.2; }
+            50% { opacity: 0.8; }
+            100% { opacity: 1; }
+        }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #0e0e0e; }
+        ::-webkit-scrollbar-thumb { background: #484848; }
+        
+        .hud-scanline {
+            background: linear-gradient(to bottom, transparent 50%, rgba(182, 200, 225, 0.02) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body selection:bg-primary-container selection:text-on-primary-container overflow-hidden h-screen flex flex-col">
+<header class="bg-[#0e0e0e] text-[#b6c8e1] font-['Space_Grotesk'] uppercase tracking-tighter text-sm fixed top-0 w-full border-b border-[#484848]/15 flex justify-between items-center px-4 h-14 w-full z-50">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[#b6c8e1]" data-icon="security">security</span>
+<span class="font-black text-[#b6c8e1] tracking-widest">SECURE_TOOLS_V4.0</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="hidden md:flex gap-4">
+<span class="text-[#b6c8e1] cursor-default text-[10px] font-bold tracking-[0.2em] border-b border-[#b6c8e1]">UTILITIES</span>
+<span class="text-[#484848] hover:text-[#b6c8e1] cursor-pointer text-[10px] font-bold tracking-[0.2em] transition-colors">NETWORK</span>
+<span class="text-[#484848] hover:text-[#b6c8e1] cursor-pointer text-[10px] font-bold tracking-[0.2em] transition-colors">VAULT</span>
+</div>
+<span class="material-symbols-outlined text-[#b6c8e1] cursor-pointer hover:bg-[#1f2020] p-1 transition-colors" data-icon="settings">settings</span>
+</div>
+</header>
+<main class="flex-1 mt-14 mb-14 md:mb-0 overflow-hidden relative flex flex-col md:flex-row">
+<div class="hud-scanline absolute inset-0 z-0"></div>
+<aside class="hidden md:flex flex-col w-64 bg-surface-container-low border-r border-outline-variant/15 z-10">
+<div class="p-6 space-y-8">
+<div>
+<h2 class="text-[10px] font-black text-on-surface-variant tracking-[0.3em] mb-4">ACTIVE_SESSION</h2>
+<div class="bg-surface-container-lowest p-4 border-l-2 border-primary">
+<p class="text-[11px] font-mono text-primary leading-tight">USER_ID: OP_0842</p>
+<p class="text-[11px] font-mono text-primary/60 leading-tight">AUTH: LVL_4_CLEARANCE</p>
+</div>
+</div>
+<nav class="space-y-1">
+<div class="flex items-center gap-3 p-3 bg-surface-container-highest text-primary transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-sm" data-icon="terminal">terminal</span>
+<span class="text-xs font-bold tracking-widest uppercase">TOOLS</span>
+</div>
+<div class="flex items-center gap-3 p-3 text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-sm" data-icon="hub">hub</span>
+<span class="text-xs font-bold tracking-widest uppercase">COMMS</span>
+</div>
+<div class="flex items-center gap-3 p-3 text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-sm" data-icon="enhanced_encryption" data-weight="fill" style="font-variation-settings: 'FILL' 1;">enhanced_encryption</span>
+<span class="text-xs font-bold tracking-widest uppercase">CRYPT</span>
+</div>
+<div class="flex items-center gap-3 p-3 text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-sm" data-icon="list_alt">list_alt</span>
+<span class="text-xs font-bold tracking-widest uppercase">LOGS</span>
+</div>
+</nav>
+</div>
+<div class="mt-auto p-6 border-t border-outline-variant/15">
+<div class="flex items-center justify-between mb-2">
+<span class="text-[9px] font-bold text-on-surface-variant tracking-widest">CPU_LOAD</span>
+<span class="text-[9px] font-mono text-tertiary">14.2%</span>
+</div>
+<div class="h-1 bg-surface-container-lowest w-full">
+<div class="h-full bg-tertiary w-[14.2%]"></div>
+</div>
+</div>
+</aside>
+<section class="flex-1 overflow-y-auto z-10 p-4 md:p-8 space-y-6">
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-outline-variant/30 pb-4">
+<div>
+<h1 class="font-headline text-3xl font-black tracking-tighter text-on-surface">TACTICAL_UTILITY_KIT</h1>
+<p class="text-xs text-on-surface-variant tracking-widest uppercase mt-1">Operational Interface // Module 4.0.2</p>
+</div>
+<div class="flex bg-surface-container-low p-1 border border-outline-variant/20">
+<button class="px-4 py-2 text-[10px] font-black tracking-[0.2em] bg-surface-container-highest text-primary">ENCODE/DECODE</button>
+<button class="px-4 py-2 text-[10px] font-black tracking-[0.2em] text-on-surface-variant hover:text-primary transition-colors">HASH</button>
+<button class="px-4 py-2 text-[10px] font-black tracking-[0.2em] text-on-surface-variant hover:text-primary transition-colors">XOR</button>
+<button class="px-4 py-2 text-[10px] font-black tracking-[0.2em] text-on-surface-variant hover:text-primary transition-colors">NOTES</button>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+<div class="lg:col-span-8 space-y-6">
+<div class="bg-surface-container-low border border-outline-variant/10">
+<div class="flex items-center justify-between px-4 py-2 border-b border-outline-variant/10 bg-surface-container">
+<span class="text-[10px] font-bold tracking-[0.3em] text-on-surface-variant uppercase">RAW_DATA_INPUT</span>
+<span class="text-[10px] font-mono text-on-surface-variant/50">L: 0 | C: 0</span>
+</div>
+<textarea class="w-full bg-surface-container-lowest p-6 font-mono text-sm text-primary-dim placeholder:text-outline/30 border-none focus:ring-0 resize-none h-64" placeholder="&gt; Enter data for processing..."></textarea>
+</div>
+<div class="bg-surface-container-low border border-outline-variant/10">
+<div class="flex items-center justify-between px-4 py-2 border-b border-outline-variant/10 bg-surface-container">
+<span class="text-[10px] font-bold tracking-[0.3em] text-on-surface-variant uppercase">PROCESSED_OUTPUT</span>
+<div class="flex gap-4">
+<button class="text-[10px] font-black text-primary hover:text-on-primary-container transition-colors uppercase tracking-widest">COPY_TO_CLIPBOARD</button>
+<button class="text-[10px] font-black text-error/70 hover:text-error transition-colors uppercase tracking-widest">CLEAR</button>
+</div>
+</div>
+<div class="w-full bg-surface-container-lowest p-6 font-mono text-sm text-tertiary/80 h-48 overflow-y-auto whitespace-pre-wrap selection:bg-tertiary-container selection:text-on-tertiary-container">
+[SYSTEM_IDLE] // WAITING_FOR_EXECUTION_COMMAND
+                        </div>
+</div>
+</div>
+<div class="lg:col-span-4 space-y-6">
+<div class="bg-surface-container-high border border-outline-variant/20 p-6 space-y-6">
+<h3 class="text-[10px] font-black tracking-[0.3em] text-primary uppercase">TOOL_PARAMETERS</h3>
+<div class="space-y-4">
+<div class="space-y-2">
+<label class="text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">ALGORITHM_SELECT</label>
+<select class="w-full bg-surface-container-lowest border border-outline-variant/30 text-xs font-bold text-on-surface p-3 appearance-none focus:border-primary focus:ring-0">
+<option>BASE64_STANDARD</option>
+<option>AES_256_GCM</option>
+<option>HEX_STRING</option>
+<option>URL_ENCODE</option>
+<option>SHA_256_HASH</option>
+</select>
+</div>
+<div class="space-y-2">
+<label class="text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">CIPHER_KEY (IF_REQ)</label>
+<input class="w-full bg-surface-container-lowest border border-outline-variant/30 text-xs font-mono text-primary p-3 focus:border-primary focus:ring-0" placeholder="********" type="password"/>
+</div>
+<div class="pt-4">
+<button class="w-full bg-primary text-on-primary font-black py-4 tracking-[0.4em] text-xs hover:bg-primary-dim transition-all active:scale-[0.98] flicker-on">
+                                    EXECUTE_PROCESS
+                                </button>
+</div>
+</div>
+<div class="pt-6 border-t border-outline-variant/10 space-y-4">
+<div class="flex items-center justify-between">
+<span class="text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">SECURITY_LEVEL</span>
+<span class="text-[9px] font-black px-2 py-0.5 bg-tertiary-container text-on-tertiary-container">MAX_SECURE</span>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-[9px] font-bold tracking-widest text-on-surface-variant uppercase">AUTO_WIPE</span>
+<span class="text-[9px] font-black px-2 py-0.5 bg-secondary-container text-secondary">ACTIVE</span>
+</div>
+</div>
+</div>
+<div class="relative h-40 bg-surface-container-low border border-outline-variant/10 overflow-hidden group">
+<div class="absolute inset-0 bg-gradient-to-t from-background to-transparent z-10 opacity-60"></div>
+<img alt="Hardware interface visualization" class="absolute inset-0 w-full h-full object-cover grayscale opacity-30 group-hover:grayscale-0 transition-all duration-700" data-alt="Abstract macro shot of microchips and circuitry with deep teal and blue lighting, technical industrial aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA8Qj79GMFMIWi0MnXKlIAEP9RCd60QBouAGlcLoMauyfaH8k6gpMauRL2eJ4A6vPIbgIYpXWuz6HCARHir5DnNCt3oa4T0xF2IOVWmaj3EZ8NlhmkMaZWRcgb1FWVIdOjuDbo6Ou9du5VRFiWxY83_LTr0VIuva1fMI00fQLq4Hxace6J8jnkdH8_nZ3xET73RJy4-Ipfn3KJbLVvqB4MTSyMU1VR7Ch-oqoaNl1T-O0N_WQY33UTuxPeVany7z-BPrlPGU2_bq8E"/>
+<div class="absolute bottom-4 left-4 z-20">
+<p class="text-[10px] font-black tracking-widest text-primary mb-1">ENCRYPTION_ENGINE_V4</p>
+<p class="text-[8px] font-mono text-on-surface-variant">READY_FOR_THROUGHPUT</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<footer class="bg-[#0e0e0e] text-[#b6c8e1] font-['Inter'] font-bold text-[10px] tracking-widest uppercase md:relative fixed bottom-0 w-full border-t border-[#484848]/15 h-14 z-50 flex justify-around items-center">
+<div class="md:hidden flex justify-around w-full h-full">
+<div class="flex flex-col items-center justify-center text-[#484848] p-2 w-full hover:bg-[#131313]">
+<span class="material-symbols-outlined" data-icon="hub">hub</span>
+<span class="mt-1">COMMS</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-[#252626] text-[#b6c8e1] p-2 w-full">
+<span class="material-symbols-outlined" data-icon="terminal">terminal</span>
+<span class="mt-1">TOOLS</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#484848] p-2 w-full hover:bg-[#131313]">
+<span class="material-symbols-outlined" data-icon="enhanced_encryption">enhanced_encryption</span>
+<span class="mt-1">CRYPT</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#484848] p-2 w-full hover:bg-[#131313]">
+<span class="material-symbols-outlined" data-icon="list_alt">list_alt</span>
+<span class="mt-1">LOGS</span>
+</div>
+</div>
+<div class="hidden md:flex items-center justify-between w-full px-8">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 bg-tertiary rounded-full shadow-[0_0_8px_rgba(172,255,164,0.5)]"></span>
+<span class="text-[9px] text-on-surface-variant">SECURE_LINK_ESTABLISHED</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px]" data-icon="history_toggle_off">history_toggle_off</span>
+<span class="text-[9px] text-on-surface-variant">DATA_WIPE_ON_EXIT: ENABLED</span>
+</div>
+</div>
+<div class="font-mono text-[9px] text-[#484848]">
+                LATENCY: 12ms // TZ: UTC-00 // PORT: 443
+            </div>
+</div>
+</footer>
+</body></html>

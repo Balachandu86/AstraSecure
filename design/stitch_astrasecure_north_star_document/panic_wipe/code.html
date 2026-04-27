@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ASTRA // SECURE - PURGE PROTOCOL</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-error": "#490106",
+              "on-primary-container": "#c0d2eb",
+              "primary-container": "#37485d",
+              "primary-dim": "#a9bad3",
+              "surface-container-high": "#1f2020",
+              "primary": "#b6c8e1",
+              "secondary-container": "#513600",
+              "surface-container-highest": "#252626",
+              "on-surface": "#e7e5e4",
+              "on-primary": "#314156",
+              "on-error-container": "#ff9993",
+              "tertiary-container": "#9df197",
+              "tertiary-fixed-dim": "#90e28a",
+              "error-dim": "#bb5551",
+              "on-secondary-fixed": "#563a00",
+              "secondary": "#feb300",
+              "on-background": "#e7e5e4",
+              "tertiary": "#acffa4",
+              "secondary-fixed": "#ffdeac",
+              "error-container": "#7f2927",
+              "on-tertiary-fixed": "#00460e",
+              "tertiary-dim": "#90e28a",
+              "primary-fixed-dim": "#c4d6f0",
+              "surface-container-lowest": "#000000",
+              "surface-variant": "#252626",
+              "inverse-surface": "#fcf8f8",
+              "surface-container-low": "#131313",
+              "surface": "#0e0e0e",
+              "on-secondary-fixed-variant": "#7b5400",
+              "on-secondary-container": "#fcb100",
+              "inverse-on-surface": "#565554",
+              "error": "#ee7d77",
+              "primary-fixed": "#d2e4fe",
+              "on-secondary": "#523700",
+              "background": "#0e0e0e",
+              "on-primary-fixed": "#304055",
+              "surface-dim": "#0e0e0e",
+              "on-tertiary": "#10651d",
+              "surface-tint": "#b6c8e1",
+              "on-tertiary-container": "#005c15",
+              "outline-variant": "#484848",
+              "tertiary-fixed": "#9df197",
+              "on-tertiary-fixed-variant": "#12661e",
+              "secondary-fixed-dim": "#ffcc7a",
+              "on-primary-fixed-variant": "#4c5d73",
+              "on-surface-variant": "#acabaa",
+              "surface-bright": "#2c2c2c",
+              "surface-container": "#191a1a",
+              "outline": "#767575",
+              "inverse-primary": "#4f6076",
+              "secondary-dim": "#eda600"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0px", "lg": "0px", "xl": "0px", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .flicker-on {
+            animation: flicker 0.2s ease-in-out;
+        }
+        @keyframes flicker {
+            0% { opacity: 0.1; }
+            50% { opacity: 0.8; }
+            100% { opacity: 1; }
+        }
+        .bg-noise {
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+            opacity: 0.03;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface-dim text-on-surface font-body selection:bg-error selection:text-on-error min-h-screen flex flex-col overflow-hidden">
+<!-- TopAppBar -->
+<header class="bg-[#0e0e0e] dark:bg-[#0e0e0e] flex justify-between items-center w-full px-6 py-4 max-w-none fixed top-0 z-[60]">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[#b6c8e1]" data-icon="security">security</span>
+<h1 class="text-[#b6c8e1] font-black tracking-widest text-lg md:text-xl uppercase font-['Space_Grotesk']">ASTRA // SECURE</h1>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden md:flex flex-col items-end">
+<span class="font-['Space_Grotesk'] tracking-tight uppercase text-xs font-bold text-[#b6c8e1]">USER_CALLSIGN_CLEARANCE</span>
+<span class="text-[10px] text-tertiary font-mono tracking-tighter">LEVEL_05_ADMIN</span>
+</div>
+<div class="w-10 h-10 bg-surface-container-high flex items-center justify-center border border-outline-variant/30">
+<span class="material-symbols-outlined text-primary" data-icon="account_circle">account_circle</span>
+</div>
+</div>
+</header>
+<!-- Main Content: Panic/Wipe Canvas -->
+<main class="flex-1 flex flex-col items-center justify-center px-6 relative mt-16 mb-20">
+<!-- Background Tactical Noise -->
+<div class="absolute inset-0 bg-noise pointer-events-none"></div>
+<div class="absolute inset-0 bg-gradient-to-b from-error/5 via-transparent to-error/5 pointer-events-none"></div>
+<div class="max-w-2xl w-full space-y-12 relative z-10">
+<!-- Alert Header -->
+<div class="text-center space-y-4">
+<div class="inline-flex items-center justify-center p-4 bg-error-container/20 border border-error/30 mb-4 flicker-on">
+<span class="material-symbols-outlined text-error scale-150" data-icon="warning" style="font-variation-settings: 'FILL' 1;">warning</span>
+</div>
+<h2 class="font-headline font-black text-4xl md:text-6xl tracking-tighter text-error uppercase leading-none">
+                    TERMINAL PURGE<br/>INITIATED
+                </h2>
+<div class="flex items-center justify-center gap-4 py-2 border-y border-outline-variant/15">
+<span class="font-label text-xs tracking-widest text-on-surface-variant uppercase">STATUS: STANDBY</span>
+<span class="w-1 h-1 bg-error rounded-full animate-pulse"></span>
+<span class="font-label text-xs tracking-widest text-error uppercase">ENCRYPTION: AES-XTS-512</span>
+</div>
+</div>
+<!-- Danger Zone Message -->
+<div class="bg-surface-container-low border-l-4 border-error p-6 space-y-3">
+<p class="font-headline text-lg font-bold text-on-surface uppercase tracking-tight">
+                    IRREVERSIBLE ACTION. ALL MISSION DATA WILL BE WIPED.
+                </p>
+<p class="text-on-surface-variant text-sm leading-relaxed font-label">
+                    Activating the purge protocol will execute a multi-pass overwrite of all local storage, revoke remote session tokens, and decommission this hardware identity from the AstraSecure network.
+                </p>
+</div>
+<!-- Counter and Metadata -->
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-surface-container-highest p-4 border border-outline-variant/10">
+<span class="block text-[10px] text-on-surface-variant uppercase font-bold tracking-[0.2em] mb-1">Auto-Revoke</span>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-tertiary text-sm" data-icon="check_circle">check_circle</span>
+<span class="font-label text-sm text-on-surface">REMOTE_SYNC_ACTIVE</span>
+</div>
+</div>
+<div class="bg-surface-container-highest p-4 border border-outline-variant/10">
+<span class="block text-[10px] text-on-surface-variant uppercase font-bold tracking-[0.2em] mb-1">Time to Lockdown</span>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-error text-sm" data-icon="timer">timer</span>
+<span class="font-label text-sm text-on-surface tabular-nums">00:59:42</span>
+</div>
+</div>
+</div>
+<!-- Interaction Zone -->
+<div class="space-y-6">
+<!-- Slide to Confirm (Visual Representation) -->
+<div class="relative w-full h-20 bg-surface-container-lowest border border-outline-variant/20 flex items-center px-2 group overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-r from-error/10 to-transparent w-full"></div>
+<div class="relative z-10 w-16 h-16 bg-error flex items-center justify-center cursor-pointer transition-transform duration-75 group-active:scale-95 shadow-[0_0_20px_rgba(238,125,119,0.3)]">
+<span class="material-symbols-outlined text-on-error" data-icon="arrow_forward">arrow_forward</span>
+</div>
+<div class="flex-1 text-center">
+<span class="font-headline font-bold text-on-surface-variant uppercase tracking-[0.3em] text-xs">SLIDE TO PURGE ALL DATA</span>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="flex flex-col md:flex-row gap-4">
+<button class="flex-1 bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-headline font-bold uppercase tracking-widest py-5 border border-outline-variant/20 transition-all duration-100 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="close">close</span>
+                        ABORT_PROTOCOL
+                    </button>
+<button class="flex-1 bg-error hover:bg-error-dim text-on-error font-headline font-black uppercase tracking-[0.2em] py-5 transition-all duration-100 shadow-[0_4px_30px_rgba(238,125,119,0.2)]">
+                        PURGE ALL DATA
+                    </button>
+</div>
+</div>
+</div>
+<!-- System Logs Background Overlay -->
+<div class="absolute bottom-10 left-10 hidden lg:block opacity-20 font-mono text-[10px] text-on-surface-variant leading-tight">
+            [SYS_LOG] INITIALIZING SHREDDER...<br/>
+            [SYS_LOG] TARGET: /MNT/SECURE_VOL_01<br/>
+            [SYS_LOG] ALGORITHM: GUTMANN_35_PASS<br/>
+            [SYS_LOG] SESSION_TOKEN: REVOKING...
+        </div>
+</main>
+<!-- BottomNavBar -->
+<nav class="bg-[#0e0e0e] dark:bg-[#0e0e0e] fixed bottom-0 w-full z-50 flex justify-around items-center px-0 py-2 border-t border-[#484848]/15">
+<a class="flex flex-col items-center justify-center text-[#6A7B92] p-3 hover:bg-[#131313] transition-colors duration-100" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="assignment">assignment</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-bold tracking-[0.1em] uppercase">MISSIONS</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#6A7B92] p-3 hover:bg-[#131313] transition-colors duration-100" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="verified_user">verified_user</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-bold tracking-[0.1em] uppercase">SECURITY</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#6A7B92] p-3 hover:bg-[#131313] transition-colors duration-100" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="construction">construction</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-bold tracking-[0.1em] uppercase">TOOLS</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-[#252626] text-[#b6c8e1] rounded-none p-3 scale-95 transition-transform duration-75" href="#">
+<span class="material-symbols-outlined mb-1 text-error" data-icon="emergency_home" style="font-variation-settings: 'FILL' 1;">emergency_home</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-bold tracking-[0.1em] uppercase">PANIC</span>
+</a>
+</nav>
+</body></html>

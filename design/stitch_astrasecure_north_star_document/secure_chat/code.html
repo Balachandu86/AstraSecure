@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-error": "#490106",
+                        "on-primary-container": "#c0d2eb",
+                        "primary-container": "#37485d",
+                        "primary-dim": "#a9bad3",
+                        "surface-container-high": "#1f2020",
+                        "primary": "#b6c8e1",
+                        "secondary-container": "#513600",
+                        "surface-container-highest": "#252626",
+                        "on-surface": "#e7e5e4",
+                        "on-primary": "#314156",
+                        "on-error-container": "#ff9993",
+                        "tertiary-container": "#9df197",
+                        "tertiary-fixed-dim": "#90e28a",
+                        "error-dim": "#bb5551",
+                        "on-secondary-fixed": "#563a00",
+                        "secondary": "#feb300",
+                        "on-background": "#e7e5e4",
+                        "tertiary": "#acffa4",
+                        "secondary-fixed": "#ffdeac",
+                        "error-container": "#7f2927",
+                        "on-tertiary-fixed": "#00460e",
+                        "tertiary-dim": "#90e28a",
+                        "primary-fixed-dim": "#c4d6f0",
+                        "surface-container-lowest": "#000000",
+                        "surface-variant": "#252626",
+                        "inverse-surface": "#fcf8f8",
+                        "surface-container-low": "#131313",
+                        "surface": "#0e0e0e",
+                        "on-secondary-fixed-variant": "#7b5400",
+                        "on-secondary-container": "#fcb100",
+                        "inverse-on-surface": "#565554",
+                        "error": "#ee7d77",
+                        "primary-fixed": "#d2e4fe",
+                        "on-secondary": "#523700",
+                        "background": "#0e0e0e",
+                        "on-primary-fixed": "#304055",
+                        "surface-dim": "#0e0e0e",
+                        "on-tertiary": "#10651d",
+                        "surface-tint": "#b6c8e1",
+                        "on-tertiary-container": "#005c15",
+                        "outline-variant": "#484848",
+                        "tertiary-fixed": "#9df197",
+                        "on-tertiary-fixed-variant": "#12661e",
+                        "secondary-fixed-dim": "#ffcc7a",
+                        "on-primary-fixed-variant": "#4c5d73",
+                        "on-surface-variant": "#acabaa",
+                        "surface-bright": "#2c2c2c",
+                        "surface-container": "#191a1a",
+                        "outline": "#767575",
+                        "inverse-primary": "#4f6076",
+                        "secondary-dim": "#eda600"
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0px", "lg": "0px", "xl": "0px", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .flicker-on {
+            animation: flicker 0.2s ease-in-out;
+        }
+        @keyframes flicker {
+            0% { opacity: 0.3; }
+            50% { opacity: 0.8; }
+            100% { opacity: 1; }
+        }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #0e0e0e; }
+        ::-webkit-scrollbar-thumb { background: #37485d; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface-dim text-on-surface font-body selection:bg-primary selection:text-on-primary">
+<!-- Top Navigation Shell -->
+<header class="bg-[#0e0e0e] text-[#b6c8e1] fixed top-0 w-full z-50 flex justify-between items-center px-6 py-4 border-b-0">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">security</span>
+<div class="flex flex-col">
+<h1 class="font-headline tracking-tight uppercase text-xs md:text-sm font-bold leading-none">ASTRA // SECURE</h1>
+<span class="text-[10px] font-headline tracking-widest text-tertiary uppercase mt-1">SENTINEL // RECON</span>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="hidden md:flex items-center gap-2 border-l border-outline-variant/30 pl-6">
+<span class="material-symbols-outlined text-[16px] text-tertiary" style="font-variation-settings: 'FILL' 1;">lock</span>
+<span class="font-headline text-[10px] tracking-widest uppercase text-on-surface-variant">E2E // ENCRYPTED</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-right hidden sm:block">
+<p class="font-headline text-[10px] font-bold text-primary tracking-tighter uppercase leading-none">USER_CALLSIGN_CLEARANCE</p>
+<p class="text-[9px] text-on-surface-variant font-mono">OP_ID: 992-X</p>
+</span>
+<div class="w-10 h-10 bg-surface-container-highest border border-outline-variant/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">person</span>
+</div>
+</div>
+</div>
+</header>
+<main class="pt-20 pb-24 min-h-screen max-w-4xl mx-auto px-4 md:px-0">
+<!-- System Status Banner -->
+<div class="mb-8 flex items-center justify-center">
+<div class="bg-surface-container-low border-l-2 border-tertiary px-4 py-2 flex items-center gap-3">
+<span class="material-symbols-outlined text-tertiary text-sm">check_circle</span>
+<p class="font-headline text-[10px] tracking-widest uppercase text-tertiary">Secure Session Established // Protocol 8.4</p>
+</div>
+</div>
+<!-- Message Stream -->
+<section class="space-y-6 flex flex-col">
+<!-- System Log -->
+<div class="flex items-center justify-center gap-4 py-2">
+<div class="h-[1px] flex-grow bg-outline-variant/20"></div>
+<p class="text-[9px] font-headline uppercase tracking-[0.2em] text-on-surface-variant">TIMESTAMP: 14:02:08 UTC</p>
+<div class="h-[1px] flex-grow bg-outline-variant/20"></div>
+</div>
+<!-- Message Block: Incoming -->
+<div class="group flex flex-col gap-1 max-w-[85%]">
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-[14px] text-primary" style="font-variation-settings: 'FILL' 1;">military_tech</span>
+<span class="font-headline text-[11px] font-bold text-primary tracking-widest uppercase">GHOST_LEAD</span>
+<span class="text-[9px] text-outline uppercase ml-auto">14:02:45</span>
+</div>
+<div class="bg-surface-container-low p-4 border-l border-primary/30 relative">
+<p class="text-sm leading-relaxed tracking-wide font-light">Target visual confirmed at secondary extraction point. Thermal signatures match high-value asset criteria. Requesting immediate verification of clearance codes before engagement.</p>
+</div>
+</div>
+<!-- System Notification -->
+<div class="flex items-center justify-center py-4">
+<div class="bg-surface-container-highest/50 border border-outline-variant/20 px-6 py-1">
+<p class="text-[10px] font-headline text-on-surface-variant tracking-[0.3em] uppercase italic flex items-center gap-2">
+<span class="material-symbols-outlined text-[12px]">refresh</span>
+                        Channel Key Rotated // Next rotation in 04:59
+                    </p>
+</div>
+</div>
+<!-- Message Block: Outgoing -->
+<div class="group flex flex-col gap-1 max-w-[85%] self-end items-end">
+<div class="flex items-center gap-2 mb-1">
+<span class="text-[9px] text-outline uppercase mr-auto">14:03:12</span>
+<span class="font-headline text-[11px] font-bold text-tertiary tracking-widest uppercase">OPERATOR_X</span>
+<span class="material-symbols-outlined text-[14px] text-tertiary" style="font-variation-settings: 'FILL' 1;">shield</span>
+</div>
+<div class="bg-surface-container-high p-4 border-r border-tertiary/30 text-right">
+<p class="text-sm leading-relaxed tracking-wide font-light text-on-surface">Codes verified. Proceed to Overwatch phase. Maintain radio silence until payload is secured. GPS telemetry sync initiated.</p>
+</div>
+<div class="mt-1 flex gap-2">
+<span class="text-[9px] text-tertiary uppercase flex items-center gap-1">
+<span class="material-symbols-outlined text-[10px]">done_all</span> Delivered
+                    </span>
+</div>
+</div>
+<!-- Encrypted Data Packet -->
+<div class="group flex flex-col gap-1 max-w-[85%]">
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-[14px] text-primary" style="font-variation-settings: 'FILL' 1;">lan</span>
+<span class="font-headline text-[11px] font-bold text-primary tracking-widest uppercase">SYSTEM_LINK</span>
+<span class="text-[9px] text-outline uppercase ml-auto">14:04:01</span>
+</div>
+<div class="bg-surface-container-lowest p-4 border border-outline-variant/10 relative overflow-hidden">
+<div class="absolute inset-0 opacity-5 pointer-events-none" style="background-image: radial-gradient(#b6c8e1 1px, transparent 1px); background-size: 10px 10px;"></div>
+<div class="flex items-start gap-4">
+<div class="w-10 h-10 bg-primary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-primary">description</span>
+</div>
+<div>
+<p class="font-headline text-[11px] font-bold text-primary uppercase mb-1">ENCRYPTED_INTEL_PACKET_V4.AES</p>
+<p class="text-[10px] text-on-surface-variant font-mono">SIZE: 14.8 MB | HASH: 0x8F22...E10</p>
+<div class="mt-2 flex gap-3">
+<button class="text-[10px] font-headline font-bold text-tertiary uppercase tracking-tighter hover:underline decoration-1 underline-offset-4">&gt; DECRYPT_AND_VIEW</button>
+<button class="text-[10px] font-headline font-bold text-on-surface-variant uppercase tracking-tighter hover:underline decoration-1 underline-offset-4">&gt; ARCHIVE</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Placeholder for live updates -->
+<div class="pt-8 opacity-40">
+<div class="flex gap-1">
+<div class="w-1 h-1 bg-primary"></div>
+<div class="w-1 h-1 bg-primary"></div>
+<div class="w-1 h-1 bg-primary"></div>
+</div>
+<p class="text-[10px] font-headline uppercase tracking-widest mt-2">GHOST_LEAD is encoding...</p>
+</div>
+</section>
+</main>
+<!-- Bottom Input Area -->
+<div class="fixed bottom-0 w-full bg-surface-dim z-40 px-4 pb-6 pt-2">
+<div class="max-w-4xl mx-auto">
+<div class="flex items-center gap-[1px] bg-surface-container-lowest border border-outline-variant/30">
+<button class="w-12 h-12 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container-low transition-colors group">
+<span class="material-symbols-outlined text-[20px]">attach_file</span>
+</button>
+<div class="h-6 w-[1px] bg-outline-variant/20"></div>
+<input class="flex-grow bg-transparent border-none focus:ring-0 text-sm font-body tracking-wider placeholder:text-outline/50 px-4 h-12" placeholder="TYPE SECURE MESSAGE..." type="text"/>
+<div class="h-6 w-[1px] bg-outline-variant/20"></div>
+<button class="w-12 h-12 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-[20px]">key</span>
+</button>
+<button class="bg-primary hover:bg-primary-dim text-on-primary px-6 h-12 font-headline font-black text-xs tracking-widest uppercase transition-colors flex items-center gap-2">
+                    ENCODE
+                    <span class="material-symbols-outlined text-[16px]">send</span>
+</button>
+</div>
+<div class="mt-2 flex justify-between px-1">
+<span class="text-[8px] font-headline text-on-surface-variant tracking-[0.2em] uppercase">LEVEL 5 CLEARANCE REQUIRED</span>
+<span class="text-[8px] font-headline text-tertiary tracking-[0.2em] uppercase">LINK ACTIVE: 100% SIGNAL</span>
+</div>
+</div>
+</div>
+<!-- Mobile Navigation Bar (Bottom) -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 flex justify-around items-center bg-[#0e0e0e] border-t border-[#484848]/15 py-2">
+<a class="flex flex-col items-center justify-center text-[#6A7B92] p-3 hover:bg-[#131313] transition-colors" href="#">
+<span class="material-symbols-outlined">assignment</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-bold tracking-[0.1em] uppercase">MISSIONS</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-[#252626] text-[#b6c8e1] rounded-none p-3 scale-95 transition-transform duration-75" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">verified_user</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-bold tracking-[0.1em] uppercase">SECURITY</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#6A7B92] p-3 hover:bg-[#131313] transition-colors" href="#">
+<span class="material-symbols-outlined">construction</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-bold tracking-[0.1em] uppercase">TOOLS</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#6A7B92] p-3 hover:bg-[#131313] transition-colors" href="#">
+<span class="material-symbols-outlined">emergency_home</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-bold tracking-[0.1em] uppercase">PANIC</span>
+</a>
+</nav>
+</body></html>

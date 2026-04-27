@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AstraSecure // Missions</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-error": "#490106",
+                        "on-primary-container": "#c0d2eb",
+                        "primary-container": "#37485d",
+                        "primary-dim": "#a9bad3",
+                        "surface-container-high": "#1f2020",
+                        "primary": "#b6c8e1",
+                        "secondary-container": "#513600",
+                        "surface-container-highest": "#252626",
+                        "on-surface": "#e7e5e4",
+                        "on-primary": "#314156",
+                        "on-error-container": "#ff9993",
+                        "tertiary-container": "#9df197",
+                        "tertiary-fixed-dim": "#90e28a",
+                        "error-dim": "#bb5551",
+                        "on-secondary-fixed": "#563a00",
+                        "secondary": "#feb300",
+                        "on-background": "#e7e5e4",
+                        "tertiary": "#acffa4",
+                        "secondary-fixed": "#ffdeac",
+                        "error-container": "#7f2927",
+                        "on-tertiary-fixed": "#00460e",
+                        "tertiary-dim": "#90e28a",
+                        "primary-fixed-dim": "#c4d6f0",
+                        "surface-container-lowest": "#000000",
+                        "surface-variant": "#252626",
+                        "inverse-surface": "#fcf8f8",
+                        "surface-container-low": "#131313",
+                        "surface": "#0e0e0e",
+                        "on-secondary-fixed-variant": "#7b5400",
+                        "on-secondary-container": "#fcb100",
+                        "inverse-on-surface": "#565554",
+                        "error": "#ee7d77",
+                        "primary-fixed": "#d2e4fe",
+                        "on-secondary": "#523700",
+                        "background": "#0e0e0e",
+                        "on-primary-fixed": "#304055",
+                        "surface-dim": "#0e0e0e",
+                        "on-tertiary": "#10651d",
+                        "surface-tint": "#b6c8e1",
+                        "on-tertiary-container": "#005c15",
+                        "outline-variant": "#484848",
+                        "tertiary-fixed": "#9df197",
+                        "on-tertiary-fixed-variant": "#12661e",
+                        "secondary-fixed-dim": "#ffcc7a",
+                        "on-primary-fixed-variant": "#4c5d73",
+                        "on-surface-variant": "#acabaa",
+                        "surface-bright": "#2c2c2c",
+                        "surface-container": "#191a1a",
+                        "outline": "#767575",
+                        "inverse-primary": "#4f6076",
+                        "secondary-dim": "#eda600"
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0rem", "lg": "0rem", "xl": "0rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .flicker-on {
+            animation: flicker 0.2s ease-in-out;
+        }
+        @keyframes flicker {
+            0% { opacity: 0.1; }
+            20% { opacity: 0.8; }
+            40% { opacity: 0.3; }
+            100% { opacity: 1; }
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface-dim text-on-surface font-body selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopAppBar -->
+<header class="bg-[#0e0e0e] dark:bg-[#0e0e0e] fixed top-0 w-full z-50 flex justify-between items-center px-6 py-4 max-w-none">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[#b6c8e1]" data-icon="security">security</span>
+<h1 class="text-[#b6c8e1] font-black tracking-widest text-lg md:text-xl uppercase font-['Space_Grotesk']">ASTRA // SECURE</h1>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden md:flex flex-col items-end">
+<span class="font-['Space_Grotesk'] tracking-tight uppercase text-[10px] font-bold text-[#b6c8e1]">USER_CALLSIGN_CLEARANCE</span>
+<span class="text-[9px] text-tertiary font-mono tracking-tighter">LEVEL_09_ENCRYPTED</span>
+</div>
+<div class="w-10 h-10 bg-surface-container-high flex items-center justify-center border border-outline-variant/20 hover:bg-[#131313] transition-colors duration-100 cursor-pointer">
+<span class="material-symbols-outlined text-primary text-xl" data-icon="person">person</span>
+</div>
+</div>
+</header>
+<main class="pt-24 pb-32 min-h-screen px-6 max-w-5xl mx-auto">
+<!-- Dashboard Summary Bar (Data Density) -->
+<div class="flex flex-wrap items-center justify-between mb-8 gap-4 py-3 bg-surface-container-low border-l-2 border-primary px-4">
+<div class="flex gap-8">
+<div>
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold mb-1">Active Links</p>
+<p class="font-headline font-bold text-lg text-primary">14 <span class="text-xs text-on-surface-variant/50">/ 16</span></p>
+</div>
+<div>
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold mb-1">Signal Status</p>
+<p class="font-headline font-bold text-lg text-tertiary">STABLE</p>
+</div>
+<div>
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold mb-1">Encryption</p>
+<p class="font-headline font-bold text-lg text-on-surface">AES-256</p>
+</div>
+</div>
+<div class="flex items-center gap-2 bg-surface-container-lowest px-3 py-1 border border-outline-variant/10">
+<div class="w-2 h-2 bg-tertiary rounded-full animate-pulse"></div>
+<span class="text-[10px] font-mono text-tertiary">SECURE CONNECTION UPLINK_04</span>
+</div>
+</div>
+<!-- Mission List -->
+<div class="space-y-4">
+<h2 class="font-headline text-xs font-bold tracking-[0.2em] text-on-surface-variant uppercase mb-6 flex items-center gap-2">
+<span class="w-8 h-[1px] bg-outline-variant"></span>
+                Active Mission Queue
+            </h2>
+<!-- Mission Item: Operation Silent Sentinel -->
+<div class="group bg-surface-container-low hover:bg-surface-container-high transition-colors duration-100 border-l border-outline-variant/20 relative overflow-hidden">
+<div class="absolute top-0 right-0 p-1">
+<span class="text-[9px] font-mono text-on-surface-variant/30 uppercase tracking-tighter">ID: OSS-9921</span>
+</div>
+<div class="p-5 flex flex-col md:flex-row md:items-center justify-between gap-6">
+<div class="flex-1">
+<div class="flex items-center gap-3 mb-2">
+<h3 class="font-headline font-bold text-lg text-on-surface tracking-tight uppercase group-hover:text-primary transition-colors">Operation Silent Sentinel</h3>
+<span class="bg-surface-container-highest text-tertiary text-[9px] font-bold px-2 py-0.5 tracking-widest border border-tertiary/20">TOP SECRET</span>
+</div>
+<div class="flex flex-wrap items-center gap-y-2 gap-x-6">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px] text-tertiary" data-icon="radio_button_checked">radio_button_checked</span>
+<span class="text-[11px] font-bold text-tertiary uppercase tracking-wider">Active Status</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px] text-on-surface-variant" data-icon="schedule">schedule</span>
+<span class="text-[11px] text-on-surface-variant uppercase tracking-wider font-medium">Last: 04m ago</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px] text-on-surface-variant" data-icon="hub">hub</span>
+<span class="text-[11px] text-on-surface-variant uppercase tracking-wider font-medium">08 Channels</span>
+</div>
+</div>
+</div>
+<button class="bg-primary text-on-primary px-6 py-2 font-headline font-bold text-xs uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all">
+                        &gt; Access Data
+                    </button>
+</div>
+</div>
+<!-- Mission Item: Task Force Alpha -->
+<div class="group bg-surface-container-low hover:bg-surface-container-high transition-colors duration-100 border-l border-outline-variant/20 relative overflow-hidden">
+<div class="absolute top-0 right-0 p-1">
+<span class="text-[9px] font-mono text-on-surface-variant/30 uppercase tracking-tighter">ID: TFA-0042</span>
+</div>
+<div class="p-5 flex flex-col md:flex-row md:items-center justify-between gap-6">
+<div class="flex-1">
+<div class="flex items-center gap-3 mb-2">
+<h3 class="font-headline font-bold text-lg text-on-surface tracking-tight uppercase group-hover:text-primary transition-colors">Task Force Alpha</h3>
+<span class="bg-surface-container-highest text-on-surface-variant text-[9px] font-bold px-2 py-0.5 tracking-widest border border-outline-variant/40">CONFIDENTIAL</span>
+</div>
+<div class="flex flex-wrap items-center gap-y-2 gap-x-6">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px] text-secondary" data-icon="pause_circle">pause_circle</span>
+<span class="text-[11px] font-bold text-secondary uppercase tracking-wider">Standby Mode</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px] text-on-surface-variant" data-icon="schedule">schedule</span>
+<span class="text-[11px] text-on-surface-variant uppercase tracking-wider font-medium">Last: 2h 12m ago</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px] text-on-surface-variant" data-icon="hub">hub</span>
+<span class="text-[11px] text-on-surface-variant uppercase tracking-wider font-medium">03 Channels</span>
+</div>
+</div>
+</div>
+<button class="border border-outline-variant/40 text-primary px-6 py-2 font-headline font-bold text-xs uppercase tracking-widest hover:bg-surface-container-highest active:scale-95 transition-all">
+                        &gt; Reconnect
+                    </button>
+</div>
+</div>
+<!-- Mission Item: Vanguard Recon (Compromised Alert) -->
+<div class="group bg-surface-container-low hover:bg-surface-container-high transition-colors duration-100 border-l border-error/50 relative overflow-hidden">
+<div class="absolute top-0 right-0 p-1">
+<span class="text-[9px] font-mono text-on-surface-variant/30 uppercase tracking-tighter">ID: VR-8810</span>
+</div>
+<div class="p-5 flex flex-col md:flex-row md:items-center justify-between gap-6">
+<div class="flex-1">
+<div class="flex items-center gap-3 mb-2">
+<h3 class="font-headline font-bold text-lg text-on-surface tracking-tight uppercase group-hover:text-error transition-colors">Vanguard Recon</h3>
+<span class="bg-error-container text-on-error-container text-[9px] font-bold px-2 py-0.5 tracking-widest border border-error/40">RESTRICTED</span>
+</div>
+<div class="flex flex-wrap items-center gap-y-2 gap-x-6">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px] text-error" data-icon="report">report</span>
+<span class="text-[11px] font-bold text-error uppercase tracking-wider">COMPROMISED</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px] text-on-surface-variant" data-icon="schedule">schedule</span>
+<span class="text-[11px] text-on-surface-variant uppercase tracking-wider font-medium">Last: 0s ago</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px] text-on-surface-variant" data-icon="hub">hub</span>
+<span class="text-[11px] text-on-surface-variant uppercase tracking-wider font-medium">01 Channels</span>
+</div>
+</div>
+</div>
+<button class="bg-error text-on-error px-6 py-2 font-headline font-bold text-xs uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all">
+                        &gt; Emergency Override
+                    </button>
+</div>
+<div class="h-0.5 bg-error w-full absolute bottom-0 left-0 opacity-20"></div>
+</div>
+<!-- Mission Item: Shadow Protocol -->
+<div class="group bg-surface-container-low hover:bg-surface-container-high transition-colors duration-100 border-l border-outline-variant/20 relative overflow-hidden">
+<div class="absolute top-0 right-0 p-1">
+<span class="text-[9px] font-mono text-on-surface-variant/30 uppercase tracking-tighter">ID: SP-3301</span>
+</div>
+<div class="p-5 flex flex-col md:flex-row md:items-center justify-between gap-6">
+<div class="flex-1">
+<div class="flex items-center gap-3 mb-2">
+<h3 class="font-headline font-bold text-lg text-on-surface tracking-tight uppercase group-hover:text-primary transition-colors">Shadow Protocol</h3>
+<span class="bg-surface-container-highest text-tertiary text-[9px] font-bold px-2 py-0.5 tracking-widest border border-tertiary/20">TOP SECRET</span>
+</div>
+<div class="flex flex-wrap items-center gap-y-2 gap-x-6">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px] text-tertiary" data-icon="radio_button_checked">radio_button_checked</span>
+<span class="text-[11px] font-bold text-tertiary uppercase tracking-wider">Active Status</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px] text-on-surface-variant" data-icon="schedule">schedule</span>
+<span class="text-[11px] text-on-surface-variant uppercase tracking-wider font-medium">Last: 18m ago</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px] text-on-surface-variant" data-icon="hub">hub</span>
+<span class="text-[11px] text-on-surface-variant uppercase tracking-wider font-medium">12 Channels</span>
+</div>
+</div>
+</div>
+<button class="bg-primary text-on-primary px-6 py-2 font-headline font-bold text-xs uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all">
+                        &gt; Access Data
+                    </button>
+</div>
+</div>
+</div>
+<!-- System Logs Footer Mini (Tactical Density) -->
+<div class="mt-12 p-4 border border-outline-variant/10 bg-surface-container-lowest font-mono text-[10px] text-on-surface-variant/40 leading-relaxed">
+<p>&gt; [SYSTEM]: FETCHING MISSION UPDATES FROM RELAY_NODE_7</p>
+<p>&gt; [SECURE]: HANDSHAKE COMPLETE AT 0x442-A</p>
+<p>&gt; [SIGNAL]: PACKET LOSS 0.002% - OPERATIONAL LIMITS CLEAR</p>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 flex justify-around items-center px-0 py-2 bg-[#0e0e0e] dark:bg-[#0e0e0e] border-t border-[#484848]/15">
+<a class="flex flex-col items-center justify-center bg-[#252626] text-[#b6c8e1] rounded-none p-3 transition-transform duration-75 scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="assignment" style="font-variation-settings: 'FILL' 1;">assignment</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-bold tracking-[0.1em] uppercase mt-1">MISSIONS</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#6A7B92] p-3 hover:bg-[#131313] transition-colors duration-100" href="#">
+<span class="material-symbols-outlined" data-icon="verified_user">verified_user</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-bold tracking-[0.1em] uppercase mt-1">SECURITY</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#6A7B92] p-3 hover:bg-[#131313] transition-colors duration-100" href="#">
+<span class="material-symbols-outlined" data-icon="construction">construction</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-bold tracking-[0.1em] uppercase mt-1">TOOLS</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#6A7B92] p-3 hover:bg-[#131313] transition-colors duration-100" href="#">
+<span class="material-symbols-outlined text-error" data-icon="emergency_home">emergency_home</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-bold tracking-[0.1em] uppercase mt-1 text-error/80">PANIC</span>
+</a>
+</nav>
+</body></html>
