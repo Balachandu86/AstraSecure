@@ -194,6 +194,15 @@ class IdentityManager(private val context: Context) {
         context.getSharedPreferences("astra_state", Context.MODE_PRIVATE)
             .getBoolean("terminal", false)
 
+    /**
+     * Remove the tombstone marker. Only used by the debug reset flow — never call
+     * this in production code; the tombstone is intentionally permanent after a wipe.
+     */
+    fun clearTombstone() {
+        context.getSharedPreferences("astra_state", Context.MODE_PRIVATE)
+            .edit().clear().apply()
+    }
+
     // ─── Private helpers ─────────────────────────────────────────────────────
 
     private fun generateKeystoreKeyPair(alias: String) {

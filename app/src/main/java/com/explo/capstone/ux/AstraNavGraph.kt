@@ -11,7 +11,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navigation
+import com.explo.capstone.BuildConfig
 import com.explo.capstone.shared.AppContainer
+import com.explo.capstone.shared.data.DebugResetHelper
 import com.explo.capstone.ui.NavTab
 import com.explo.capstone.ui.TerminatedScreen
 
@@ -58,7 +60,15 @@ fun AstraNavGraph(
                             Uri.fromParts("package", context.packageName, null))
                         context.startActivity(settingsIntent)
                     }
-                }
+                },
+                onDebugReset = if (BuildConfig.DEBUG) {
+                    {
+                        DebugResetHelper.reset(container)
+                        navController.navigate("provisioning") {
+                            popUpTo("terminated") { inclusive = true }
+                        }
+                    }
+                } else null,
             )
         }
 

@@ -3,6 +3,7 @@ package com.explo.capstone.ux
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.explo.capstone.crypto.signal.SignalKeyManager
 import com.explo.capstone.identity.IdentityManager
 import com.explo.capstone.shared.AppContainer
 import com.explo.capstone.ui.ProvisioningIntent
@@ -17,6 +18,7 @@ import kotlinx.coroutines.launch
  */
 class ProvisioningViewModel(
     private val identityManager: IdentityManager,
+    private val signalKeyManager: SignalKeyManager,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<ProvisioningUiState>(ProvisioningUiState.Probing)
@@ -76,9 +78,18 @@ class ProvisioningViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             _state.value = ProvisioningUiState.Provisioning("GENERATING KEY MATERIAL...")
             runCatching { identityManager.provisionIdentity(callsign) }
-                .onSuccess {
-                    _state.value = ProvisioningUiState.Provisioning("IDENTITY COMMITTED")
-                    _provisioningSuccess.emit(Unit)
+                .onSuccess { user ->
+                    _state.value = ProvisioningUiState.Provisioning("PROVISIONING SIGNAL PROTOCOL...")
+                    runCatching { signalKeyManager.provision(user.id, callsign) }
+                        .onSuccess {
+                            _state.value = ProvisioningUiState.Provisioning("IDENTITY COMMITTED")
+                            _provisioningSuccess.emit(Unit)
+                        }
+                        .onFailure { e ->
+                            _state.value = ProvisioningUiState.Failed(
+                                "SIGNAL_PROVISION_FAILED: ${e.message?.take(40) ?: "UNKNOWN"}"
+                            )
+                        }
                 }
                 .onFailure { e ->
                     _state.value = ProvisioningUiState.Failed(
@@ -98,6 +109,6 @@ class ProvisioningViewModel(
     class Factory(private val container: AppContainer) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            ProvisioningViewModel(container.identityManager) as T
+            ProvisioningViewModel(container.identityManager, container.signalKeyManager) as T
     }
 }

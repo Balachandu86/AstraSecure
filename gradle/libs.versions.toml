@@ -21,10 +21,15 @@ coroutinesBom = "1.10.2"
 kotlinxSerializationJson = "1.7.3"
 
 # Signal (16 KB-aligned replacement for org.whispersystems:signal-protocol-android)
-libsignalAndroid = "0.58.2"
+libsignalAndroid = "0.93.0"
 
 # Core library desugaring (required by libsignal-android)
 desugarJdkLibs = "2.1.5"
+
+# Network (Signal server transport)
+okhttp = "4.12.0"
+retrofit = "2.11.0"
+gson = "2.10.1"
 
 # Test
 junit = "4.13.2"
@@ -72,6 +77,13 @@ libsignal-android = { module = "org.signal:libsignal-android", version.ref = "li
 
 # Core library desugaring
 desugar-jdk-libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugarJdkLibs" }
+
+# Network
+okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
+okhttp-logging = { module = "com.squareup.okhttp3:logging-interceptor", version.ref = "okhttp" }
+retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
+retrofit-converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "retrofit" }
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 
 # Test
 junit = { module = "junit:junit", version.ref = "junit" }

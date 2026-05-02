@@ -20,6 +20,11 @@ android {
     }
 
     buildTypes {
+        debug {
+            // 10.0.2.2 is the AVD alias for the host machine's localhost.
+            // Override with a real IP when testing on physical devices.
+            buildConfigField("String", "SIGNAL_SERVER_URL", "\"http://10.0.2.2:3000\"")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
@@ -29,6 +34,8 @@ android {
             ndk {
                 abiFilters += "arm64-v8a"
             }
+            // Replace with actual server URL before release
+            buildConfigField("String", "SIGNAL_SERVER_URL", "\"https://your.server.host\"")
         }
     }
     compileOptions {
@@ -71,6 +78,13 @@ dependencies {
     // Signal Protocol — 16 KB-aligned native libs (Tejas)
     implementation(libs.libsignal.android)
     coreLibraryDesugaring(libs.desugar.jdk.libs)
+
+    // Network transport (Signal server relay)
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.logging)
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.converter.gson)
+    implementation(libs.gson)
 
     // Android Security for Keystore + EncryptedSharedPreferences (Sandrani)
     implementation(libs.androidx.security.crypto)

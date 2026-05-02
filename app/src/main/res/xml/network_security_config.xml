@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Network security config for AstraSecure Signal relay.
+
+    Debug builds: allow cleartext to 10.0.2.2 (AVD host alias) so the local
+    Node.js server can be reached without TLS during development.
+
+    Release builds: TLS only. Replace the domain and pin digest before shipping.
+    Pin digest = SHA-256 of the server's leaf certificate public key (base64).
+    Generate with:  openssl x509 -in server.crt -pubkey -noout |
+                    openssl pkey -pubin -outform DER |
+                    openssl dgst -sha256 -binary | base64
+-->
+<network-security-config>
+
+    <!-- Local dev: emulator talks to host machine over plain HTTP -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">10.0.2.2</domain>
+    </domain-config>
+
+    <!-- Production server: TLS + certificate pin -->
+    <!-- Uncomment and fill in before release
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">your.server.host</domain>
+        <pin-set expiration="2027-01-01">
+            <pin digest="SHA-256">REPLACE_WITH_BASE64_SHA256_OF_SERVER_PUBKEY=</pin>
+        </pin-set>
+    </domain-config>
+    -->
+
+    <base-config cleartextTrafficPermitted="false" />
+
+</network-security-config>

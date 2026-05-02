@@ -37,11 +37,17 @@ class PanicViewModel(private val container: AppContainer) : ViewModel() {
     private fun executeWipe() {
         viewModelScope.launch {
             val phases: List<Pair<String, suspend () -> Unit>> = listOf(
-                "REVOKING_REMOTE_TOKENS" to { safeRun { container.identityManager.revokeRemoteTokens() } },
+                "REVOKING_REMOTE_TOKENS" to {
+                    safeRun { container.identityManager.revokeRemoteTokens() }
+                    val userId = container.identityManager.getUserIdentity()?.id
+                    if (userId != null) {
+                        container.serverClient.deleteUser(userId)
+                    }
+                },
                 "OVERWRITING_LOCAL_DATA" to { container.missionRepository.wipeAll(); container.channelRepository.wipeAll(); container.messageRepository.wipeAll(); container.documentRepository.wipeAll(); container.persistenceManager.clear() },
                 "INVALIDATING_KEYS" to { safeRun { container.cryptoEngine.invalidateAllKeys() } },
                 "WIPING_SCHEMA" to { container.rankRepository.wipeAll(); container.channelCategoryRepository.wipeAll(); container.messageCategoryRepository.wipeAll(); container.missionTypeRepository.wipeAll(); container.clearanceRepository.wipeAll() },
-                "FINALIZING" to { safeRun { container.identityManager.wipeAll() }; container.store.clear(); container.securityEventLog.clear(); safeRun { container.identityManager.writeTombstone() } },
+                "FINALIZING" to { safeRun { container.signalStore.wipeAll() }; safeRun { container.identityManager.wipeAll() }; container.store.clear(); container.securityEventLog.clear(); safeRun { container.identityManager.writeTombstone() } },
             )
             phases.forEachIndexed { i, (label, action) ->
                 _state.value = PanicUiState.Wiping(label, ((i + 1) * 100) / phases.size)

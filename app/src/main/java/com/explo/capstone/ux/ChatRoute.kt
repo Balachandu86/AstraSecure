@@ -20,6 +20,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.explo.capstone.BuildConfig
 import com.explo.capstone.shared.AppContainer
+import com.explo.capstone.shared.DecryptedIncomingMessage
 import com.explo.capstone.shared.Severity
 import com.explo.capstone.ui.*
 import kotlinx.coroutines.Dispatchers
@@ -54,6 +55,9 @@ class ChatViewModel(
     private var nextRotationMs = System.currentTimeMillis() + ROTATION_INTERVAL_MS
     private var missionKeyAlias = ""
     private var callsign = "OPERATOR"
+    // UUID from IdentityManager — used as the Signal protocol address so the server
+    // can route messages correctly (the server identifies users by their JWT UUID, not callsign).
+    private var userId = ""
     private var userClearanceLevel = 0
 
     init {
@@ -76,9 +80,34 @@ class ChatViewModel(
         runCatching { container.cryptoEngine.generateMissionKey(missionKeyAlias) }
             .onFailure { degraded.add(DegradedSubsystem.CRYPTO) }
 
-        callsign = runCatching { container.identityManager.getUserIdentity()?.displayName?.uppercase() }
-            .getOrElse { null } ?: "OPERATOR"
+        val identity = runCatching { container.identityManager.getUserIdentity() }.getOrNull()
+        callsign = identity?.displayName?.uppercase() ?: "OPERATOR"
+        userId = identity?.id ?: callsign   // fall back to callsign if not yet provisioned
         userClearanceLevel = container.clearanceRepository.clearanceFor("user_local", missionId).value?.level ?: 0
+
+        // Register this device as a channel member so others can send us messages
+        runCatching { container.serverClient.joinChannel(channelId) }
+            .onFailure { container.securityEventLog.emit(Severity.WARN, "Chat", "JOIN_CHANNEL_FAILED // $channelId") }
+
+        // Observe incoming decrypted messages from the server WebSocket
+        viewModelScope.launch {
+            container.incomingDecrypted
+                .collect { incoming: DecryptedIncomingMessage ->
+                    if (incoming.channelId != channelId) return@collect
+                    val text = runCatching { incoming.plaintextBytes.decodeToString() }
+                        .getOrElse { "[ BINARY // ${incoming.plaintextBytes.size}B ]" }
+                    chatItems.add(
+                        ChatItem.Incoming(
+                            id = incoming.messageId,
+                            timestampMs = incoming.timestampMs,
+                            sender = incoming.senderId,
+                            plaintext = text,
+                            decryptOk = true,
+                        )
+                    )
+                    updateChatItems()
+                }
+        }
 
         val categories = container.messageCategoryRepository.categories.value
         val defaultCat = categories.filter { it.minClearanceToSend <= userClearanceLevel }
@@ -184,7 +213,7 @@ class ChatViewModel(
             val result = container.messageRepository.send(
                 channelId = channelId,
                 missionKeyAlias = missionKeyAlias,
-                senderId = callsign,
+                senderId = userId,
                 plaintext = text.encodeToByteArray(),
                 categoryId = content.composer.selectedCategory.id,
             )
@@ -211,7 +240,7 @@ class ChatViewModel(
             val result = container.messageRepository.send(
                 channelId = channelId,
                 missionKeyAlias = missionKeyAlias,
-                senderId = callsign,
+                senderId = userId,
                 plaintext = item.plaintext.encodeToByteArray(),
                 categoryId = content.composer.selectedCategory.id,
             )

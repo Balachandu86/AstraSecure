@@ -12,19 +12,21 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.explo.capstone.BuildConfig
 
 /**
  * Shown when [com.explo.capstone.identity.IdentityManager.readTombstone] returns true.
  * No navigation out — this is a terminal state until OS Clear Data is performed.
  */
 @Composable
-fun TerminatedScreen(onUninstall: () -> Unit = {}) {
+fun TerminatedScreen(onUninstall: () -> Unit = {}, onDebugReset: (() -> Unit)? = null) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -119,6 +121,38 @@ fun TerminatedScreen(onUninstall: () -> Unit = {}) {
                         fontFamily = FontFamily.Monospace,
                     ),
                 )
+            }
+
+            if (BuildConfig.DEBUG && onDebugReset != null) {
+                Spacer(Modifier.height(8.dp))
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(Color(0xFFFFB300).copy(alpha = 0.25f))
+                )
+
+                Button(
+                    onClick = onDebugReset,
+                    modifier = Modifier.fillMaxWidth().height(44.dp),
+                    shape = RectangleShape,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFFB300).copy(alpha = 0.12f),
+                        contentColor = Color(0xFFFFB300),
+                    ),
+                ) {
+                    Text(
+                        "[DEBUG]  RESET IDENTITY + REPROVISION",
+                        style = AstraTheme.Typography.labelSmall.copy(
+                            color = Color(0xFFFFB300),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 9.sp,
+                            fontFamily = FontFamily.Monospace,
+                            letterSpacing = 1.sp,
+                        ),
+                    )
+                }
             }
         }
     }
