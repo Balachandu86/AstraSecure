@@ -23,21 +23,29 @@ import com.explo.capstone.shared.Severity
 
 // ─── State ───────────────────────────────────────────────────────────────────
 
-data class MissionKeyEntry(val missionId: String, val missionName: String, val keyAlias: String, val ageFormatted: String)
+data class SignalKeyStatus(
+    val identityFingerprint: String,
+    val spkRotatedAtLabel: String,
+    val opkCount: Int,
+)
 
 sealed interface SecurityUiState {
     data object Loading : SecurityUiState
     data class Content(
         val callsign: String, val hardwareKeyId: String, val provisionedLabel: String,
-        val deviceSecure: Boolean, val strongBox: Boolean, val protocol: String,
-        val missionKeys: List<MissionKeyEntry>, val events: List<SecurityEvent>,
+        val deviceSecure: Boolean, val strongBox: Boolean,
+        val integrity: String,
+        val protocol: String,
+        val signalKeyStatus: SignalKeyStatus,
+        val events: List<SecurityEvent>,
         val degraded: Set<DegradedSubsystem>,
     ) : SecurityUiState
 }
 
 sealed interface SecurityIntent {
     data object Refresh : SecurityIntent
-    data class RotateKey(val missionId: String) : SecurityIntent
+    data object RotateSPK : SecurityIntent
+    data object ReplenishOPKs : SecurityIntent
     data object NavigateToPanic : SecurityIntent
     data object NavigateToAdmin : SecurityIntent
     data object ExportLog : SecurityIntent
@@ -82,30 +90,66 @@ private fun SecurityBody(state: SecurityUiState.Content, onIntent: (SecurityInte
         Spacer(Modifier.height(8.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PostureInfoCell("PROTOCOL", state.protocol, AstraTheme.Primary, Modifier.weight(1f))
-            PostureInfoCell("INTEGRITY", "LOCAL_ONLY", AstraTheme.Secondary, Modifier.weight(1f))
+            PostureInfoCell(
+                "INTEGRITY",
+                state.integrity,
+                if (state.integrity == "AUTHENTICATED") AstraTheme.Tertiary else AstraTheme.Secondary,
+                Modifier.weight(1f),
+            )
         }
         Spacer(Modifier.height(20.dp))
 
-        // Mission keys
-        SectionHeader("ACTIVE MISSION KEYS")
-        if (state.missionKeys.isEmpty()) {
-            Text("> NO ACTIVE MISSION KEYS", style = AstraTheme.Typography.labelSmall.copy(color = Color(0xFFACABAA).copy(0.5f), fontSize = 10.sp, fontFamily = FontFamily.Monospace))
-        } else {
-            state.missionKeys.forEach { key ->
-                Row(
-                    Modifier.fillMaxWidth().background(AstraTheme.SurfaceContainerLow).border(1.dp, AstraTheme.OutlineVariant.copy(0.1f)).padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Outlined.Key, null, tint = AstraTheme.Tertiary.copy(0.6f), modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(10.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(key.missionName.uppercase(), style = AstraTheme.Typography.labelSmall.copy(color = AstraTheme.OnSurface, fontWeight = FontWeight.Bold, fontSize = 10.sp))
-                        Text("${key.keyAlias} // ${key.ageFormatted}", style = AstraTheme.Typography.labelSmall.copy(color = Color(0xFFACABAA).copy(0.5f), fontSize = 9.sp, fontFamily = FontFamily.Monospace))
-                    }
-                    Text("> ROTATE", style = AstraTheme.Typography.labelSmall.copy(color = AstraTheme.Secondary, fontSize = 9.sp, fontWeight = FontWeight.Bold),
-                        modifier = Modifier.clickable { onIntent(SecurityIntent.RotateKey(key.missionId)) })
+        // Signal key status
+        SectionHeader("SIGNAL KEY STATUS")
+        Column(Modifier.fillMaxWidth().background(AstraTheme.SurfaceContainerLow).border(1.dp, AstraTheme.OutlineVariant.copy(0.1f))) {
+            // Identity key row
+            Row(
+                Modifier.fillMaxWidth().border(width = 0.dp, color = Color.Transparent).padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Outlined.Key, null, tint = AstraTheme.Tertiary.copy(0.6f), modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("IDENTITY KEY", style = AstraTheme.Typography.labelSmall.copy(color = AstraTheme.OnSurface, fontWeight = FontWeight.Bold, fontSize = 10.sp))
+                    Text(state.signalKeyStatus.identityFingerprint, style = AstraTheme.Typography.labelSmall.copy(color = AstraTheme.Tertiary.copy(0.7f), fontSize = 9.sp, fontFamily = FontFamily.Monospace))
                 }
-                Spacer(Modifier.height(4.dp))
+                Text("HARDWARE BOUND", style = AstraTheme.Typography.labelSmall.copy(color = AstraTheme.Tertiary.copy(0.5f), fontSize = 8.sp, fontFamily = FontFamily.Monospace))
+            }
+            Box(Modifier.fillMaxWidth().height(1.dp).background(AstraTheme.OutlineVariant.copy(0.08f)))
+            // Signed pre-key row
+            Row(
+                Modifier.fillMaxWidth().padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Outlined.Key, null, tint = AstraTheme.Primary.copy(0.6f), modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("SIGNED PRE-KEY", style = AstraTheme.Typography.labelSmall.copy(color = AstraTheme.OnSurface, fontWeight = FontWeight.Bold, fontSize = 10.sp))
+                    Text("ROTATED: ${state.signalKeyStatus.spkRotatedAtLabel}", style = AstraTheme.Typography.labelSmall.copy(color = Color(0xFFACABAA).copy(0.5f), fontSize = 9.sp, fontFamily = FontFamily.Monospace))
+                }
+                Text("> ROTATE SPK", style = AstraTheme.Typography.labelSmall.copy(color = AstraTheme.Secondary, fontSize = 9.sp, fontWeight = FontWeight.Bold),
+                    modifier = Modifier.clickable { onIntent(SecurityIntent.RotateSPK) })
+            }
+            Box(Modifier.fillMaxWidth().height(1.dp).background(AstraTheme.OutlineVariant.copy(0.08f)))
+            // One-time pre-keys row
+            Row(
+                Modifier.fillMaxWidth().padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Outlined.Key, null, tint = AstraTheme.Primary.copy(0.4f), modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("ONE-TIME PRE-KEYS", style = AstraTheme.Typography.labelSmall.copy(color = AstraTheme.OnSurface, fontWeight = FontWeight.Bold, fontSize = 10.sp))
+                    Text(
+                        "${state.signalKeyStatus.opkCount} REMAINING",
+                        style = AstraTheme.Typography.labelSmall.copy(
+                            color = if (state.signalKeyStatus.opkCount < 10) AstraTheme.Error else Color(0xFFACABAA).copy(0.5f),
+                            fontSize = 9.sp, fontFamily = FontFamily.Monospace,
+                        )
+                    )
+                }
+                Text("> REPLENISH", style = AstraTheme.Typography.labelSmall.copy(color = AstraTheme.Primary, fontSize = 9.sp, fontWeight = FontWeight.Bold),
+                    modifier = Modifier.clickable { onIntent(SecurityIntent.ReplenishOPKs) })
             }
         }
         Spacer(Modifier.height(20.dp))

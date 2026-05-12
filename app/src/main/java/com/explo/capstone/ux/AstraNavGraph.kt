@@ -1,11 +1,23 @@
 package com.explo.capstone.ux
 
-import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -13,7 +25,10 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navigation
 import com.explo.capstone.BuildConfig
 import com.explo.capstone.shared.AppContainer
+import com.explo.capstone.shared.PackageUtils
 import com.explo.capstone.shared.data.DebugResetHelper
+import com.explo.capstone.transport.BurnedEvent
+import com.explo.capstone.ui.AstraTheme
 import com.explo.capstone.ui.NavTab
 import com.explo.capstone.ui.TerminatedScreen
 
@@ -43,23 +58,19 @@ fun AstraNavGraph(
         }
     }
 
+    var burnedAlert by remember { mutableStateOf<BurnedEvent?>(null) }
+    LaunchedEffect(Unit) {
+        container.operativeBurnedAlert.collect { event -> burnedAlert = event }
+    }
+
+    Box(Modifier.fillMaxSize()) {
     NavHost(navController, startDestination) {
         // ─── Terminated (post-wipe, no exit) ─────────────────────────────
         composable("terminated") {
             val context = LocalContext.current
             TerminatedScreen(
                 onUninstall = {
-                    // ACTION_DELETE is unreliable on emulators; fall back to App Info which
-                    // always surfaces the Uninstall button regardless of device/API level.
-                    val deleteIntent = Intent(Intent.ACTION_DELETE,
-                        Uri.fromParts("package", context.packageName, null))
-                    try {
-                        context.startActivity(deleteIntent)
-                    } catch (_: ActivityNotFoundException) {
-                        val settingsIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                            Uri.fromParts("package", context.packageName, null))
-                        context.startActivity(settingsIntent)
-                    }
+                    PackageUtils.uninstallApp(context)
                 },
                 onDebugReset = if (BuildConfig.DEBUG) {
                     {
@@ -93,6 +104,25 @@ fun AstraNavGraph(
                     selectedTab = selectedTab,
                     onTabSelect = onTabSelect,
                     onMissionClick = { missionId -> navController.navigate("missions/$missionId") },
+                    onProfileClick = { navController.navigate("profile") },
+                    onJoinClick = { navController.navigate("redeem") },
+                )
+            }
+
+            composable("redeem") {
+                RedeemRoute(
+                    container = container,
+                    onBack = { navController.popBackStack() },
+                )
+            }
+
+            composable("profile") {
+                ProfileRoute(
+                    container = container,
+                    selectedTab = selectedTab,
+                    onTabSelect = onTabSelect,
+                    onBack = { navController.popBackStack() },
+                    onAdminClick = { navController.navigate("admin") },
                 )
             }
 
@@ -105,6 +135,7 @@ fun AstraNavGraph(
                     onTabSelect = onTabSelect,
                     onChannelClick = { channelId -> navController.navigate("missions/$missionId/channels/$channelId") },
                     onBack = { navController.popBackStack() },
+                    onProfileClick = { navController.navigate("profile") },
                 )
             }
 
@@ -118,6 +149,7 @@ fun AstraNavGraph(
                     selectedTab = selectedTab,
                     onTabSelect = onTabSelect,
                     onBack = { navController.popBackStack() },
+                    onProfileClick = { navController.navigate("profile") },
                 )
             }
 
@@ -133,11 +165,17 @@ fun AstraNavGraph(
                         }
                     },
                     onNavigateToAdmin = { navController.navigate("admin") },
+                    onProfileClick = { navController.navigate("profile") },
                 )
             }
 
             composable("tools") {
-                ToolsRoute(container = container, selectedTab = selectedTab, onTabSelect = onTabSelect)
+                ToolsRoute(
+                    container = container,
+                    selectedTab = selectedTab,
+                    onTabSelect = onTabSelect,
+                    onProfileClick = { navController.navigate("profile") },
+                )
             }
 
             composable("panic") {
@@ -145,8 +183,45 @@ fun AstraNavGraph(
             }
 
             composable("admin") {
-                AdminRoute(container = container, selectedTab = selectedTab, onTabSelect = onTabSelect)
+                AdminRoute(
+                    container = container,
+                    selectedTab = selectedTab,
+                    onTabSelect = onTabSelect,
+                    onProfileClick = { navController.navigate("profile") },
+                )
             }
+        }
+    } // NavHost
+
+        burnedAlert?.let { event ->
+            BurnedAlertBanner(callsign = event.callsign, onDismiss = { burnedAlert = null })
+        }
+    } // Box
+}
+
+@Composable
+private fun BurnedAlertBanner(callsign: String, onDismiss: () -> Unit) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .zIndex(Float.MAX_VALUE)
+            .background(AstraTheme.Error)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Text(
+            "[ BURNED ] OPERATIVE $callsign — IDENTITY WIPED",
+            style = AstraTheme.Typography.labelSmall.copy(
+                color = AstraTheme.OnPrimary,
+                fontWeight = FontWeight.Black,
+                fontSize = 11.sp,
+                fontFamily = FontFamily.Monospace,
+                letterSpacing = 1.sp,
+            ),
+            modifier = Modifier.padding(end = 36.dp),
+        )
+        IconButton(onClick = onDismiss, modifier = Modifier.align(Alignment.CenterEnd).size(28.dp)) {
+            Icon(Icons.Outlined.Close, contentDescription = "Dismiss", tint = AstraTheme.OnPrimary, modifier = Modifier.size(16.dp))
         }
     }
 }

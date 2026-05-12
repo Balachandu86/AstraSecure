@@ -1,6 +1,5 @@
 package com.explo.capstone.ux
 
-import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
@@ -16,6 +15,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.explo.capstone.shared.AppContainer
+import com.explo.capstone.shared.PackageUtils
 import com.explo.capstone.shared.Severity
 import com.explo.capstone.ui.*
 import kotlinx.coroutines.delay
@@ -36,13 +36,14 @@ class PanicViewModel(private val container: AppContainer) : ViewModel() {
 
     private fun executeWipe() {
         viewModelScope.launch {
+            val userId = runCatching { container.identityManager.getUserIdentity()?.id }.getOrNull() ?: ""
+
             val phases: List<Pair<String, suspend () -> Unit>> = listOf(
                 "REVOKING_REMOTE_TOKENS" to {
+                    // tombstone() triggers the server-side operative_burned WebSocket push to all peers
+                    runCatching { container.apiClient.tombstone() }
                     safeRun { container.identityManager.revokeRemoteTokens() }
-                    val userId = container.identityManager.getUserIdentity()?.id
-                    if (userId != null) {
-                        container.serverClient.deleteUser(userId)
-                    }
+                    if (userId.isNotEmpty()) container.serverClient.deleteUser(userId)
                 },
                 "OVERWRITING_LOCAL_DATA" to { container.missionRepository.wipeAll(); container.channelRepository.wipeAll(); container.messageRepository.wipeAll(); container.documentRepository.wipeAll(); container.persistenceManager.clear() },
                 "INVALIDATING_KEYS" to { safeRun { container.cryptoEngine.invalidateAllKeys() } },
@@ -75,15 +76,7 @@ fun PanicRoute(container: AppContainer, selectedTab: NavTab, onTabSelect: (NavTa
     AstraAppShell(selectedTab = selectedTab, onTabSelect = onTabSelect) { padding ->
         Box(Modifier.padding(padding)) {
             PanicContent(state, onUninstall = {
-                val deleteIntent = Intent(Intent.ACTION_DELETE,
-                    Uri.fromParts("package", context.packageName, null))
-                try {
-                    context.startActivity(deleteIntent)
-                } catch (_: ActivityNotFoundException) {
-                    val settingsIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                        Uri.fromParts("package", context.packageName, null))
-                    context.startActivity(settingsIntent)
-                }
+                PackageUtils.uninstallApp(context)
             }) { vm.handle(it) }
         }
     }

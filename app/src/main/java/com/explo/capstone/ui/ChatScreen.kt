@@ -140,9 +140,6 @@ private fun ChatBody(
     Column(Modifier.fillMaxSize()) {
         if (state.degraded.isNotEmpty()) DegradedBanner(state.degraded)
 
-        // Session established banner
-        SessionBanner()
-
         // Message stream
         val listState = rememberLazyListState()
         LaunchedEffect(state.messages.size) {
@@ -615,7 +612,7 @@ private fun ComposerSection(composer: ComposerState, onIntent: (ChatIntent) -> U
 
         // Footer status
         Text(
-            "LINK ACTIVE: 100% SIGNAL  //  DATA_WIPE_ON_PAUSE",
+            "E2E_ENCRYPTED  //  DATA_WIPE_ON_PAUSE",
             style = AstraTheme.Typography.labelSmall.copy(
                 color = AstraTheme.OutlineVariant.copy(0.5f),
                 fontSize = 8.sp,

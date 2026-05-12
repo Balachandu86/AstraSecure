@@ -15,6 +15,7 @@ data class StoreSnapshot(
     val messageCategories: List<MessageCategory> = emptyList(),
     val missionTypes: List<MissionType> = emptyList(),
     val clearanceAssignments: List<ClearanceAssignment> = emptyList(),
+    val messages: List<Message> = emptyList(),  // plaintext persisted; encryptedContent is @Transient
 )
 
 class PersistenceManager(context: Context) {

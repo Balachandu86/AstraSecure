@@ -1,5 +1,6 @@
 package com.explo.capstone.ui
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -104,7 +105,10 @@ fun TerminatedScreen(onUninstall: () -> Unit = {}, onDebugReset: (() -> Unit)? =
             Spacer(Modifier.height(8.dp))
 
             Button(
-                onClick = onUninstall,
+                onClick = {
+                    Log.d("TerminatedScreen", "Uninstall button clicked")
+                    onUninstall()
+                },
                 modifier = Modifier.fillMaxWidth().height(44.dp),
                 shape = RectangleShape,
                 colors = ButtonDefaults.buttonColors(

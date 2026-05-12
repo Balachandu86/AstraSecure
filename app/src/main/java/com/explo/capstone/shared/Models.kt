@@ -7,6 +7,11 @@ import kotlinx.serialization.Serializable
 @Serializable
 enum class MissionStatus { ACTIVE, STANDBY, COMPROMISED, ARCHIVED }
 
+/** Per-participant membership status on a mission. PENDING members have redeemed an
+ *  invite but are awaiting CHIEF confirmation; they see only the mission summary. */
+@Serializable
+enum class ParticipantStatus { ACTIVE, PENDING }
+
 // ─── Design-system color token (restricted palette for schema records) ────────
 
 @Serializable
@@ -32,10 +37,31 @@ data class Mission(
     val typeId: String,              // FK → MissionType
     val status: MissionStatus,
     val phase: String? = null,       // free-text, optional ("PHASE 4 / EXTRACTION")
-    val missionKeyAlias: String,
+    val missionKeyAlias: String = "",
     val participantIds: List<String> = emptyList(),
+    val pendingParticipants: List<PendingParticipant> = emptyList(),
+    val myStatus: ParticipantStatus = ParticipantStatus.ACTIVE,
+    /** When [myStatus] is PENDING: the userId of the operator who issued the
+     *  invite this user redeemed. Null in all other cases. */
+    val inviterId: String? = null,
+    /** When [myStatus] is PENDING: the inviter's identity-key fingerprint, for
+     *  the SAS ceremony display on the redeemer's side. */
+    val inviterFingerprint: String? = null,
     val createdAtMs: Long,
     val lastActivityMs: Long,
+    val createdBy: String = "",      // userId of the operator who created this mission
+)
+
+/** A user who has redeemed an invite for a mission but is awaiting CHIEF confirmation.
+ *  The fingerprint is the SHA-256 short-form of their identity key — shown alongside
+ *  the issuer's confirm button for the SAS verification ceremony. */
+@Serializable
+data class PendingParticipant(
+    val userId: String,
+    val callsign: String = "",
+    val invitedBy: String = "",
+    val invitedAtMs: Long = 0,
+    val fingerprint: String = "",   // e.g., "A1B2-C3D4-E5F6-7890"
 )
 
 @Serializable
@@ -48,18 +74,21 @@ data class Channel(
     val minClearanceToView: Int,     // can override category default
     val minClearanceToPost: Int,
     val createdAtMs: Long,
+    val createdBy: String = "",      // userId of the operator who created this channel
 )
 
+@Serializable
 data class Message(
     val id: String,
     val channelId: String,           // messages live in channels, not missions
     val senderId: String,
     val categoryId: String,          // FK → MessageCategory
-    val encryptedContent: ByteArray,
     val paddedSizeBytes: Int,        // For metadata normalization
     val timestampMs: Long,
+    val plaintextContent: String = "",
+    // encryptedContent is session-only; keys rotate and ciphertext can't be re-decrypted after restart
+    @kotlinx.serialization.Transient val encryptedContent: ByteArray = ByteArray(0),
 ) {
-    // ByteArray requires manual equals/hashCode
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Message) return false

@@ -41,6 +41,7 @@ sealed interface ChannelListUiState {
         val sections: List<ChannelSection>,
         val categories: List<ChannelCategory>,
         val showNewChannelSheet: Boolean = false,
+        val canCreateChannel: Boolean = false,
     ) : ChannelListUiState
     data class MissionNotFound(val id: String) : ChannelListUiState
 }
@@ -190,18 +191,20 @@ private fun ChannelListBody(state: ChannelListUiState.Content, onIntent: (Channe
             Spacer(Modifier.height(80.dp)) // room for FAB
         }
 
-        // "+ New Intel" FAB
-        FloatingActionButton(
-            onClick = { onIntent(ChannelListIntent.ShowNewChannelSheet) },
-            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
-            containerColor = AstraTheme.Primary,
-            contentColor = AstraTheme.OnPrimary,
-            shape = RectangleShape,
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 16.dp)) {
-                Icon(Icons.Default.Add, contentDescription = "New Intel", modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(6.dp))
-                Text("NEW INTEL", style = AstraTheme.Typography.labelSmall.copy(color = AstraTheme.OnPrimary, fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = 1.sp))
+        // "+ New Intel" FAB — only shown to operators with OPERATIVE rank (level ≥ 5) or mission owner
+        if (state.canCreateChannel) {
+            FloatingActionButton(
+                onClick = { onIntent(ChannelListIntent.ShowNewChannelSheet) },
+                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+                containerColor = AstraTheme.Primary,
+                contentColor = AstraTheme.OnPrimary,
+                shape = RectangleShape,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 16.dp)) {
+                    Icon(Icons.Default.Add, contentDescription = "New Intel", modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("NEW INTEL", style = AstraTheme.Typography.labelSmall.copy(color = AstraTheme.OnPrimary, fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = 1.sp))
+                }
             }
         }
     }
@@ -299,8 +302,10 @@ private fun NewChannelSheet(
                 onClick = {
                     if (name.isBlank()) { nameError = "> CHANNEL_NAME_REQUIRED"; return@Button }
                     if (!name.matches(Regex("^[A-Z][A-Z0-9_ ]{0,29}$"))) { nameError = "> LETTERS, DIGITS, UNDERSCORE, SPACE ONLY"; return@Button }
+                    if (selectedCategoryId.isEmpty()) { nameError = "> NO CATEGORIES AVAILABLE — CONTACT ADMIN"; return@Button }
                     onCreate(name.trim(), description.trim(), selectedCategoryId)
                 },
+                enabled = categories.isNotEmpty(),
                 modifier = Modifier.fillMaxWidth().height(48.dp),
                 shape = RectangleShape,
                 colors = ButtonDefaults.buttonColors(containerColor = AstraTheme.Primary, contentColor = AstraTheme.OnPrimary),

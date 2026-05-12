@@ -14,11 +14,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.explo.capstone.shared.AppContainer
 import com.explo.capstone.shared.Severity
 import com.explo.capstone.ui.*
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 
 class SecurityViewModel(private val container: AppContainer) : ViewModel() {
     private val _state = MutableStateFlow<SecurityUiState>(SecurityUiState.Loading)
@@ -37,31 +39,47 @@ class SecurityViewModel(private val container: AppContainer) : ViewModel() {
         var deviceSecure = false; var strongBox = false
         try { container.identityManager.deviceAttestation().let { a -> deviceSecure = a.isDeviceSecure; strongBox = a.hasStrongBox } } catch (_: NotImplementedError) { /* already degraded */ }
 
-        val missions = container.store.missions.value
-        val keys = missions.map { m ->
-            val age = System.currentTimeMillis() - m.createdAtMs
-            val ageF = when { age < 3_600_000L -> "${age/60_000}m"; age < 86_400_000L -> "${age/3_600_000}h"; else -> "${age/86_400_000}d ${(age%86_400_000)/3_600_000}h" }
-            MissionKeyEntry(m.id, m.name, m.missionKeyAlias, ageF)
-        }
-
         val events = container.securityEventLog.events.value
+        val integrity = if (container.signalStore.loadJwt().isNotEmpty()) "AUTHENTICATED" else "LOCAL_ONLY"
 
-        _state.value = SecurityUiState.Content(callsign, hwKey, provisioned, deviceSecure, strongBox, "Signal v3.4", keys, events, degraded)
+        val signalKeyStatus = buildSignalKeyStatus()
+
+        _state.value = SecurityUiState.Content(callsign, hwKey, provisioned, deviceSecure, strongBox, integrity, "Signal Protocol", signalKeyStatus, events, degraded)
         container.securityEventLog.emit(Severity.INFO, "Security", "POSTURE_CHECK_COMPLETE")
     }
 
-    fun rotateKey(missionId: String) {
-        try {
-            val mission = container.store.missions.value.find { it.id == missionId } ?: return
-            val newAlias = container.cryptoEngine.rotateMissionKey(mission.missionKeyAlias)
-            container.store.updateMissions { list ->
-                list.map { if (it.id == missionId) it.copy(missionKeyAlias = newAlias) else it }
-            }
-            container.securityEventLog.emit(Severity.INFO, "CryptoEngine", "KEY_ROTATED // $newAlias")
-        } catch (_: NotImplementedError) {
-            container.securityEventLog.emit(Severity.WARN, "CryptoEngine", "KEY_ROTATE_FAILED // CRYPTO_OFFLINE")
+    private fun buildSignalKeyStatus(): SignalKeyStatus {
+        val fingerprint = runCatching {
+            val ikp = container.signalStore.getIdentityKeyPair()
+            ikp.publicKey.serialize().take(8).joinToString("") { "%02X".format(it) }
+        }.getOrElse { "NOT_PROVISIONED" }
+
+        val spkRotatedAtMs = container.signalStore.getLastSpkRotationMs()
+        val spkLabel = if (spkRotatedAtMs == 0L) "NEVER" else {
+            java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.US).format(java.util.Date(spkRotatedAtMs))
         }
-        refresh()
+
+        val opkCount = container.signalStore.preKeyCount()
+
+        return SignalKeyStatus(fingerprint, spkLabel, opkCount)
+    }
+
+    fun rotateSPK() {
+        viewModelScope.launch {
+            runCatching { container.signalKeyManager.rotateSignedPreKey() }
+                .onSuccess { container.securityEventLog.emit(Severity.INFO, "CryptoEngine", "SPK_ROTATED") }
+                .onFailure { container.securityEventLog.emit(Severity.WARN, "CryptoEngine", "SPK_ROTATE_FAILED // ${it.message}") }
+            refresh()
+        }
+    }
+
+    fun replenishOPKs() {
+        viewModelScope.launch {
+            runCatching { container.signalKeyManager.replenishPreKeys() }
+                .onSuccess { container.securityEventLog.emit(Severity.INFO, "CryptoEngine", "OPK_REPLENISHED") }
+                .onFailure { container.securityEventLog.emit(Severity.WARN, "CryptoEngine", "OPK_REPLENISH_FAILED // ${it.message}") }
+            refresh()
+        }
     }
 
     class Factory(private val container: AppContainer) : ViewModelProvider.Factory {
@@ -77,6 +95,7 @@ fun SecurityRoute(
     onTabSelect: (NavTab) -> Unit,
     onNavigateToPanic: () -> Unit,
     onNavigateToAdmin: () -> Unit = {},
+    onProfileClick: (() -> Unit)? = null,
 ) {
     val vm: SecurityViewModel = viewModel(factory = SecurityViewModel.Factory(container))
     val state by vm.state.collectAsStateWithLifecycle()
@@ -101,6 +120,7 @@ fun SecurityRoute(
                 titleOverride = "SECURITY",
                 callsign = "POSTURE",
                 clearanceLabel = "DASHBOARD",
+                onProfileClick = onProfileClick,
                 actions = {
                     IconButton(onClick = onNavigateToAdmin) {
                         Icon(Icons.Outlined.Settings, contentDescription = "Admin Console", tint = AstraTheme.Primary)
@@ -113,7 +133,8 @@ fun SecurityRoute(
             SecurityContent(state) { intent ->
                 when (intent) {
                     is SecurityIntent.Refresh -> vm.refresh()
-                    is SecurityIntent.RotateKey -> vm.rotateKey(intent.missionId)
+                    is SecurityIntent.RotateSPK -> vm.rotateSPK()
+                    is SecurityIntent.ReplenishOPKs -> vm.replenishOPKs()
                     is SecurityIntent.NavigateToPanic -> onNavigateToPanic()
                     is SecurityIntent.NavigateToAdmin -> onNavigateToAdmin()
                     is SecurityIntent.ExportLog -> {

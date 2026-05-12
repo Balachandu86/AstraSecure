@@ -31,17 +31,42 @@ import java.util.UUID
  */
 class AstraSignalProtocolStore(context: Context) : SignalProtocolStore {
 
-    private val prefs: SharedPreferences = buildPrefs(context)
+    private val appContext = context.applicationContext
+    private val prefs: SharedPreferences = buildPrefs(appContext)
 
     // ─── Wipe ─────────────────────────────────────────────────────────────────
 
     fun wipeAll() {
-        prefs.edit().apply {
-            prefs.all.keys.filter { it.startsWith("signal_") }.forEach(::remove)
-        }.apply()
+        // Clear entries first (in case deleteSharedPreferences is a no-op while the
+        // file is held open by this process), then drop the underlying file so the
+        // EncryptedSharedPreferences keyset goes with it. Without the file delete,
+        // the next launch reopens a file whose keyset references a master key that
+        // IdentityManager.wipeAll() is about to remove from the Keystore — and the
+        // resulting decryption failure crashes AppContainer construction.
+        runCatching {
+            prefs.edit().apply {
+                prefs.all.keys.filter { it.startsWith("signal_") }.forEach(::remove)
+            }.apply()
+        }
+        runCatching { appContext.deleteSharedPreferences("astra_signal") }
     }
 
     fun isProvisioned(): Boolean = prefs.contains("signal_ikp")
+
+    // ─── JWT persistence (GAP-02 fix) ────────────────────────────────────────
+
+    fun saveJwt(token: String) {
+        prefs.edit().putString("signal_jwt", token).apply()
+    }
+
+    fun loadJwt(): String = prefs.getString("signal_jwt", "") ?: ""
+
+    // ─── All OPKs (used for server re-registration) ───────────────────────────
+
+    fun loadAllPreKeys(): List<PreKeyRecord> =
+        prefs.all.entries
+            .filter { it.key.startsWith("signal_pk_") }
+            .mapNotNull { (_, v) -> runCatching { PreKeyRecord(decode(v as String)) }.getOrNull() }
 
     // ─── IdentityKeyStore ─────────────────────────────────────────────────────
 
@@ -201,22 +226,44 @@ class AstraSignalProtocolStore(context: Context) : SignalProtocolStore {
     private fun senderKeyKey(sender: SignalProtocolAddress, distributionId: UUID) =
         "signal_sk_${distributionId}_${sender.name}_${sender.deviceId}"
 
-    // ─── KyberPreKeyStore ────────────────────────────────────────────────────
+    // ─── KyberPreKeyStore ─────────────────────────────────────────────────────
+    // Backed by EncryptedSharedPreferences entries keyed "signal_kyber_{id}".
 
     override fun loadKyberPreKey(kyberPreKeyId: Int): KyberPreKeyRecord {
-        throw org.signal.libsignal.protocol.InvalidKeyIdException("Kyber not implemented")
+        val raw = prefs.getString("signal_kyber_$kyberPreKeyId", null)
+            ?: throw org.signal.libsignal.protocol.InvalidKeyIdException("No kyber pre-key $kyberPreKeyId")
+        return KyberPreKeyRecord(decode(raw))
     }
 
-    override fun loadKyberPreKeys(): List<KyberPreKeyRecord> = emptyList()
+    override fun loadKyberPreKeys(): List<KyberPreKeyRecord> =
+        prefs.all.entries
+            .filter { it.key.startsWith("signal_kyber_") && !it.key.endsWith("_rotated_ms") }
+            .mapNotNull { (_, v) -> runCatching { KyberPreKeyRecord(decode(v as String)) }.getOrNull() }
 
     override fun storeKyberPreKey(kyberPreKeyId: Int, record: KyberPreKeyRecord) {
-        // No-op for now
+        prefs.edit().putString("signal_kyber_$kyberPreKeyId", encode(record.serialize())).apply()
     }
 
-    override fun containsKyberPreKey(kyberPreKeyId: Int): Boolean = false
+    override fun containsKyberPreKey(kyberPreKeyId: Int): Boolean =
+        prefs.contains("signal_kyber_$kyberPreKeyId")
 
-    override fun markKyberPreKeyUsed(kyberPreKeyId: Int, preKeyId: Int, baseKey: org.signal.libsignal.protocol.ecc.ECPublicKey) {
-        // No-op
+    override fun markKyberPreKeyUsed(
+        kyberPreKeyId: Int,
+        preKeyId: Int,
+        baseKey: org.signal.libsignal.protocol.ecc.ECPublicKey,
+    ) {
+        // Rotated-key model: one long-lived Kyber key per user, rotated weekly by
+        // SignalKeyManager.rotateKyberPreKey(). No one-time consumption needed here.
+    }
+
+    fun removeKyberPreKey(id: Int) {
+        prefs.edit().remove("signal_kyber_$id").apply()
+    }
+
+    fun getLastKyberRotationMs(): Long = prefs.getLong("signal_kyber_last_rotated_ms", 0L)
+
+    fun saveLastKyberRotationMs(ms: Long) {
+        prefs.edit().putLong("signal_kyber_last_rotated_ms", ms).apply()
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────

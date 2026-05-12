@@ -5,7 +5,10 @@ import android.util.Log
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.emptyFlow
 import okhttp3.*
@@ -19,7 +22,6 @@ import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.*
 import java.io.IOException
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
 
 // ─── Retrofit API surface ─────────────────────────────────────────────────────
 
@@ -35,6 +37,9 @@ private interface SignalApi {
 
     @PUT("v1/keys/signed")
     suspend fun uploadSignedPreKey(@Body dto: SignedPreKeyDto)
+
+    @PUT("v1/keys/kyber")
+    suspend fun uploadKyberPreKey(@Body dto: KyberPreKeyDto)
 
     @POST("v1/messages/{recipientId}")
     suspend fun sendMessage(@Path("recipientId") recipientId: String, @Body request: SendMessageRequest)
@@ -70,6 +75,8 @@ private interface SignalApi {
  */
 class SignalServerClient(
     private val serverUrl: String,
+    initialJwt: String = "",
+    private val onJwtSaved: (String) -> Unit = {},
 ) : MessageTransport {
 
     companion object {
@@ -77,13 +84,20 @@ class SignalServerClient(
         private const val WS_PATH = "v1/websocket"
     }
 
-    private var jwt: String = ""
+    private var jwt: String = initialJwt
     private var localUserId: String = ""
-    private val _connected = AtomicBoolean(false)
-    override val isConnected: Boolean get() = _connected.get()
+    private val _connectionState = MutableStateFlow(false)
+    override val connectionState: StateFlow<Boolean> = _connectionState.asStateFlow()
+    override val isConnected: Boolean get() = _connectionState.value
 
     private val _keysNeeded = MutableSharedFlow<Int>(extraBufferCapacity = 4)
     override val keysNeeded: Flow<Int> = _keysNeeded.asSharedFlow()
+
+    private val _syncInvalidated = MutableSharedFlow<Long>(extraBufferCapacity = 8)
+    override val syncInvalidated: Flow<Long> = _syncInvalidated.asSharedFlow()
+
+    private val _operativeBurned = MutableSharedFlow<BurnedEvent>(extraBufferCapacity = 10)
+    override val operativeBurned: Flow<BurnedEvent> = _operativeBurned.asSharedFlow()
 
     private val okHttp: OkHttpClient by lazy {
         val logging = HttpLoggingInterceptor().apply {
@@ -126,6 +140,9 @@ class SignalServerClient(
         signedPreKeyPublicBytes: ByteArray,
         signedPreKeySignature: ByteArray,
         oneTimePreKeys: List<Pair<Int, ByteArray>>,
+        kyberPreKeyId: Int,
+        kyberPreKeyPublicBytes: ByteArray,
+        kyberPreKeySignature: ByteArray,
     ): Result<String> = runCatching {
         if (serverUrl.isBlank()) return Result.failure(IllegalStateException("No server"))
         val response = api.register(
@@ -140,11 +157,17 @@ class SignalServerClient(
                     signature = b64(signedPreKeySignature),
                 ),
                 oneTimePreKeys = oneTimePreKeys.map { (id, pub) -> PreKeyDto(id, b64(pub)) },
+                kyberPreKey = KyberPreKeyDto(
+                    id = kyberPreKeyId,
+                    publicKey = b64(kyberPreKeyPublicBytes),
+                    signature = b64(kyberPreKeySignature),
+                ),
             )
         )
         localUserId = userId
         jwt = response.token
-        _connected.set(true)
+        onJwtSaved(jwt)
+        _connectionState.value = true
         response.token
     }.onFailure { Log.w(TAG, "register failed: ${it.message}") }
 
@@ -165,6 +188,11 @@ class SignalServerClient(
         runCatching {
             api.uploadSignedPreKey(SignedPreKeyDto(id, b64(publicKeyBytes), b64(signature)))
         }.onFailure { Log.w(TAG, "uploadSignedPreKey failed: ${it.message}") }
+
+    override suspend fun uploadKyberPreKey(id: Int, publicKeyBytes: ByteArray, signature: ByteArray): Result<Unit> =
+        runCatching {
+            api.uploadKyberPreKey(KyberPreKeyDto(id, b64(publicKeyBytes), b64(signature)))
+        }.onFailure { Log.w(TAG, "uploadKyberPreKey failed: ${it.message}") }
 
     // ─── Messaging ────────────────────────────────────────────────────────────
 
@@ -217,12 +245,17 @@ class SignalServerClient(
             val wsUrl = serverUrl
                 .trimEnd('/')
                 .replace("http://", "ws://")
-                .replace("https://", "wss://") + "/$WS_PATH?token=$jwt"
+                .replace("https://", "wss://") + "/$WS_PATH"
 
             val request = Request.Builder().url(wsUrl).build()
             val ws = okHttp.newWebSocket(request, object : WebSocketListener() {
                 override fun onOpen(webSocket: WebSocket, response: Response) {
-                    _connected.set(true)
+                    // Send JWT as first frame rather than exposing it in the URL query string
+                    webSocket.send(JSONObject().apply {
+                        put("type", "auth")
+                        put("token", jwt)
+                    }.toString())
+                    _connectionState.value = true
                     Log.i(TAG, "WebSocket connected")
                 }
 
@@ -250,18 +283,29 @@ class SignalServerClient(
                                 Log.i(TAG, "Server requests OPK replenishment (count=$count)")
                                 _keysNeeded.tryEmit(count)
                             }
+                            "sync_invalidated" -> {
+                                val version = json.optLong("version", 0L)
+                                Log.i(TAG, "sync_invalidated version=$version reason=${json.optString("reason")}")
+                                _syncInvalidated.tryEmit(version)
+                            }
+                            "operative_burned" -> {
+                                val userId   = json.optString("userId", "")
+                                val callsign = json.optString("callsign", userId.take(8).uppercase())
+                                Log.i(TAG, "operative_burned userId=$userId callsign=$callsign")
+                                _operativeBurned.tryEmit(BurnedEvent(userId, callsign))
+                            }
                         }
                     }.onFailure { Log.w(TAG, "WS message parse error: ${it.message}") }
                 }
 
                 override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                    _connected.set(false)
+                    _connectionState.value = false
                     Log.w(TAG, "WebSocket failure: ${t.message}")
                     close(t)
                 }
 
                 override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-                    _connected.set(false)
+                    _connectionState.value = false
                     close()
                 }
             })

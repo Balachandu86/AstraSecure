@@ -30,6 +30,8 @@ The relay server is a stateless Node.js/Express process backed by PostgreSQL. It
 | [07_MAINTENANCE.md](07_MAINTENANCE.md) | Daily `pg_dump` backups via cron, log retention, uptime monitoring, updating the server, rotating JWT secret, schema migration notes, maintenance checklist |
 | [08_CLOUD_DEPLOY_NO_VPS.md](08_CLOUD_DEPLOY_NO_VPS.md) | **No-VPS deployment** — Supabase (free managed PostgreSQL) + Railway / Render / Koyeb (free Node.js host). Full walkthrough, HTTPS out of the box, no Linux admin required |
 | [09_LOCAL_DEPLOY.md](09_LOCAL_DEPLOY.md) | **Local development on Windows 11** — Docker or native PostgreSQL, Node.js, emulator wiring (`10.0.2.2`), physical device via ADB reverse or LAN IP, Windows Firewall, reset/cheat sheet |
+| [gaps_1.md](gaps_1.md) | **Implementation gap audit** — 21 gaps across provisioning flow, JWT persistence, server auth, ACK ownership, OPK ID logic, and more. P0–P3 priority ratings with root-cause file:line citations and fixes |
+| [UI_audit.md](UI_audit.md) | **UI production-readiness audit** — 20 gaps across schema seeding, access control, misleading status indicators, dead UI elements, and hardcoded demo values. 6 P0 blockers, 10 P1 functional issues, 4 P2 polish items. Includes a 4-sprint remediation plan |
 
 ---
 

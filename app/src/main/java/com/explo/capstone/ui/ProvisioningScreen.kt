@@ -30,7 +30,7 @@ sealed interface ProvisioningUiState {
     data class CallsignEntry(val callsign: String, val error: String?) : ProvisioningUiState
     data class Review(val callsign: String, val deviceSecure: Boolean, val strongBoxBacked: Boolean) : ProvisioningUiState
     data class Provisioning(val progressLabel: String) : ProvisioningUiState
-    data class Failed(val reason: String) : ProvisioningUiState
+    data class Failed(val reason: String, val canRetryServer: Boolean = false) : ProvisioningUiState
 }
 
 // ─── Intents ─────────────────────────────────────────────────────────────────
@@ -39,6 +39,7 @@ sealed interface ProvisioningIntent {
     data class UpdateCallsign(val callsign: String) : ProvisioningIntent
     data object Advance : ProvisioningIntent
     data object Retry : ProvisioningIntent
+    data object RetryServer : ProvisioningIntent
 }
 
 // ─── Root composable ─────────────────────────────────────────────────────────
@@ -429,8 +430,19 @@ private fun FailedView(
                 fontFamily = FontFamily.Monospace,
             ),
         )
-        // KEYSTORE_OFFLINE is a device-level problem — no retry possible
-        if (state.reason != "KEYSTORE_OFFLINE") {
+        if (state.canRetryServer) {
+            Spacer(Modifier.height(24.dp))
+            AstraButtonPrimary(
+                text = "> RETRY_SERVER_CONNECTION",
+                onClick = { onIntent(ProvisioningIntent.RetryServer) },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(12.dp))
+            AstraButtonTertiary(
+                text = "CHANGE CALLSIGN",
+                onClick = { onIntent(ProvisioningIntent.Retry) },
+            )
+        } else if (state.reason != "KEYSTORE_OFFLINE") {
             Spacer(Modifier.height(24.dp))
             AstraButtonTertiary(
                 text = "RETRY",

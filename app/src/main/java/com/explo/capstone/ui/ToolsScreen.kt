@@ -22,7 +22,7 @@ import java.net.URLDecoder
 import java.net.URLEncoder
 import java.security.MessageDigest
 
-enum class ToolMode { ENCODE_DECODE, HASH }
+enum class ToolMode { ENCODE_DECODE, HASH, VAULT }
 enum class Direction { ENCODE, DECODE }
 enum class Algorithm(val label: String, val needsKey: Boolean = false) {
     BASE64("BASE64"), HEX("HEX_STRING"), URL_ENCODE("URL_ENCODE"),
@@ -59,6 +59,7 @@ fun executeToolsOp(state: ToolsState): ToolsState {
                 MessageDigest.getInstance(alg).digest(state.input.toByteArray())
                     .joinToString("") { "%02x".format(it) }
             }
+            ToolMode.VAULT -> return state
         }
         state.copy(output = result, outputError = false)
     } catch (e: Exception) {
@@ -71,10 +72,13 @@ fun ToolsContent(
     state: ToolsState,
     onStateChange: (ToolsState) -> Unit,
     onExecute: () -> Unit,
+    vaultState: VaultUiState = VaultUiState(),
+    onVaultIntent: (VaultIntent) -> Unit = {},
 ) {
     val algos = when (state.mode) {
         ToolMode.ENCODE_DECODE -> listOf(Algorithm.BASE64, Algorithm.HEX, Algorithm.URL_ENCODE, Algorithm.AES_256_GCM)
         ToolMode.HASH -> listOf(Algorithm.SHA_256, Algorithm.SHA_512)
+        ToolMode.VAULT -> emptyList()
     }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
@@ -110,6 +114,12 @@ fun ToolsContent(
             }
         }
         Spacer(Modifier.height(16.dp))
+
+        // Vault mode: render vault UI and return early
+        if (state.mode == ToolMode.VAULT) {
+            VaultBody(vaultState, onVaultIntent)
+            return@Column
+        }
 
         // Algorithm select
         Row(
@@ -255,7 +265,7 @@ fun ToolsContent(
 
         Spacer(Modifier.height(12.dp))
         Text(
-            "> SECURE_LINK_ESTABLISHED // DATA_WIPE_ON_PAUSE",
+            "> LOCAL_ONLY // DATA_WIPE_ON_PAUSE",
             style = AstraTheme.Typography.labelSmall.copy(color = Color(0xFFACABAA).copy(0.3f), fontSize = 9.sp, fontFamily = FontFamily.Monospace)
         )
         Spacer(Modifier.height(16.dp))

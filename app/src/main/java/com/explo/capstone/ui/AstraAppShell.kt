@@ -75,10 +75,11 @@ fun DefaultAstraTopBar(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AstraTopBar(
-    callsign: String = "GHOST_OPS_09",
-    clearanceLabel: String = "LEVEL_09_ENCRYPTED",
+    callsign: String = "OPERATOR",
+    clearanceLabel: String = "LEVEL_??_ENCRYPTED",
     navigationIcon: @Composable (() -> Unit)? = null,
     titleOverride: String? = null,
+    onProfileClick: (() -> Unit)? = null,
     actions: (@Composable RowScope.() -> Unit)? = null,
 ) {
     TopAppBar(
@@ -133,13 +134,13 @@ fun AstraTopBar(
                     .size(40.dp)
                     .background(AstraTheme.SurfaceContainerHigh)
                     .border(1.dp, AstraTheme.OutlineVariant.copy(alpha = 0.2f))
-                    .clickable { },
+                    .then(if (onProfileClick != null) Modifier.clickable { onProfileClick() } else Modifier),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Person,
                     contentDescription = "Profile",
-                    tint = AstraTheme.Primary,
+                    tint = if (onProfileClick != null) AstraTheme.Primary else AstraTheme.Primary.copy(0.4f),
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -165,6 +166,7 @@ fun AstraBottomBar(selectedTab: NavTab, onTabSelect: (NavTab) -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .background(AstraTheme.SurfaceDim)
+                .navigationBarsPadding()
                 .padding(vertical = 4.dp),
             horizontalArrangement = Arrangement.SpaceAround
         ) {

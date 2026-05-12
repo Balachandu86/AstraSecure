@@ -12,13 +12,12 @@ import org.signal.libsignal.protocol.SignalProtocolAddress
 import org.signal.libsignal.protocol.ecc.ECPublicKey
 import org.signal.libsignal.protocol.groups.GroupCipher
 import org.signal.libsignal.protocol.groups.GroupSessionBuilder
+import org.signal.libsignal.protocol.kem.KEMPublicKey
 import org.signal.libsignal.protocol.message.CiphertextMessage
 import org.signal.libsignal.protocol.message.PreKeySignalMessage
 import org.signal.libsignal.protocol.message.SenderKeyDistributionMessage
 import org.signal.libsignal.protocol.message.SignalMessage
 import org.signal.libsignal.protocol.state.PreKeyBundle
-import org.signal.libsignal.protocol.kem.KEMKeyPair
-import org.signal.libsignal.protocol.kem.KEMKeyType
 import java.util.UUID
 
 /**
@@ -37,13 +36,15 @@ import java.util.UUID
 class SignalCryptoEngine(
     private val store: AstraSignalProtocolStore,
     private val transport: MessageTransport,
-    private val localUserId: String,
+    @Volatile private var localUserId: String,
 ) {
 
     companion object {
         private const val TAG = "SignalCryptoEngine"
         private const val DEVICE_ID = 1
     }
+
+    fun updateLocalUserId(id: String) { localUserId = id }
 
     private fun getLocalAddress() = SignalProtocolAddress(localUserId, DEVICE_ID)
 
@@ -64,17 +65,26 @@ class SignalCryptoEngine(
 
         if (!store.containsSession(address)) {
             val response = transport.fetchPreKeyBundle(recipientUserId)
-            val bundle = response.toPreKeyBundle()
-            SessionBuilder(store, getLocalAddress(), address).process(bundle)
+            SessionBuilder(store, getLocalAddress(), address).process(response.toPreKeyBundle())
         }
 
-        val encrypted = SessionCipher(store, getLocalAddress(), address).encrypt(plaintext)
-        val wireType = if (encrypted.type == CiphertextMessage.PREKEY_TYPE) {
-            MessageType.PREKEY_SIGNAL_MESSAGE
-        } else {
-            MessageType.WHISPER_MESSAGE
+        return try {
+            val encrypted = SessionCipher(store, getLocalAddress(), address).encrypt(plaintext)
+            val wireType = if (encrypted.type == CiphertextMessage.PREKEY_TYPE)
+                MessageType.PREKEY_SIGNAL_MESSAGE else MessageType.WHISPER_MESSAGE
+            encrypted.serialize() to wireType
+        } catch (e: org.signal.libsignal.protocol.NoSessionException) {
+            // Stale or invalidated session (e.g. recipient re-provisioned) — drop it,
+            // fetch a fresh bundle, re-establish, and retry exactly once.
+            Log.w(TAG, "Stale session for $recipientUserId — refreshing")
+            store.deleteSession(address)
+            val response = transport.fetchPreKeyBundle(recipientUserId)
+            SessionBuilder(store, getLocalAddress(), address).process(response.toPreKeyBundle())
+            val encrypted = SessionCipher(store, getLocalAddress(), address).encrypt(plaintext)
+            val wireType = if (encrypted.type == CiphertextMessage.PREKEY_TYPE)
+                MessageType.PREKEY_SIGNAL_MESSAGE else MessageType.WHISPER_MESSAGE
+            encrypted.serialize() to wireType
         }
-        return encrypted.serialize() to wireType
     }
 
     /**
@@ -135,23 +145,31 @@ class SignalCryptoEngine(
      * Members who receive the SKDM call [processSenderKeyDistribution] so they
      * can decrypt future channel messages sent by Alice.
      */
+    /**
+     * Returns the set of member IDs that actually received the SKDM.
+     * Callers must use this set (not the full [memberIds] list) when tracking delivery.
+     */
     suspend fun distributeChannelSenderKey(
         channelId: String,
         aliceUserId: String,
         distributionId: UUID,
         memberIds: List<String>,
-    ) {
+    ): Set<String> {
         val sender = SignalProtocolAddress(aliceUserId, DEVICE_ID)
         val skdm: SenderKeyDistributionMessage = GroupSessionBuilder(store).create(sender, distributionId)
+        val reached = mutableSetOf<String>()
 
         memberIds.filter { it != aliceUserId }.forEach { memberId ->
             runCatching {
                 val (ciphertext, type) = encryptForAddress(memberId, skdm.serialize())
                 transport.sendMessage(memberId, channelId, ciphertext, type)
+            }.onSuccess {
+                reached.add(memberId)
             }.onFailure {
                 Log.w(TAG, "SKDM delivery failed for $memberId: ${it.message}")
             }
         }
+        return reached
     }
 
     /**
@@ -177,8 +195,16 @@ class SignalCryptoEngine(
         val spkPublicBytes    = Base64.decode(signedPreKey.publicKey, Base64.DEFAULT)
         val spkSignatureBytes = Base64.decode(signedPreKey.signature, Base64.DEFAULT)
 
-        val opkId     = oneTimePreKey?.id ?: -1
+        // Use 0 as the OPK ID sentinel when no OPK is present — libsignal validates
+        // the OPK ID (as u32) only when opkPublic is non-null, so 0 is safe here.
+        val opkId     = oneTimePreKey?.id ?: 0
         val opkPublic = oneTimePreKey?.let { ECPublicKey(Base64.decode(it.publicKey, Base64.DEFAULT)) }
+
+        // Kyber-1024 KEM key from the server (PQXDH). The server INNER JOINs kyber_prekeys
+        // so every successful bundle response includes this field — non-null guaranteed.
+        val kyberPublicBytes    = Base64.decode(kyberPreKey.publicKey, Base64.DEFAULT)
+        val kyberSignatureBytes = Base64.decode(kyberPreKey.signature, Base64.DEFAULT)
+        val kyberKey            = KEMPublicKey(kyberPublicBytes)
 
         return PreKeyBundle(
             registrationId,
@@ -189,9 +215,9 @@ class SignalCryptoEngine(
             ECPublicKey(spkPublicBytes),
             spkSignatureBytes,
             IdentityKey(identityKeyBytes),
-            PreKeyBundle.NULL_PRE_KEY_ID,
-            KEMKeyPair.generate(KEMKeyType.KYBER_1024).publicKey,
-            ByteArray(0),
+            kyberPreKey.id,
+            kyberKey,
+            kyberSignatureBytes,
         )
     }
 }

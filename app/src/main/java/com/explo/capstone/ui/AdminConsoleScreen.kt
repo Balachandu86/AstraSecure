@@ -44,6 +44,23 @@ data class AdminUiState(
     val missions: List<Mission> = emptyList(),
     val editSheet: AdminEditSheet? = null,
     val deleteError: AdminDeleteError? = null,
+    val localUserId: String = "user_local",
+    /** Set after a successful "Generate invite" so the UI can display the
+     *  freshly-issued token + QR code inline under the originating mission. */
+    val activeInvite: ActiveInvite? = null,
+    /** Transient banner for invite-flow errors (issue/confirm/revoke failures). */
+    val inviteError: String? = null,
+    /** Transient banner for any admin-flow success acknowledgement. */
+    val successMessage: String? = null,
+)
+
+/** A token + URI bundle the UI displays after a successful issue.
+ *  Cleared when the operator dismisses the panel or revokes the token. */
+data class ActiveInvite(
+    val missionId: String,
+    val token: String,
+    val uri: String,         // canonical InviteUri.encode(token) — what the QR encodes
+    val expiresAtIso: String,
 )
 
 data class AdminDeleteError(val message: String, val refs: List<EntityRef>)
@@ -77,6 +94,19 @@ sealed interface AdminIntent {
 
     data class AssignClearance(val userId: String, val missionId: String, val rankId: String) : AdminIntent
     data class UnassignClearance(val userId: String, val missionId: String) : AdminIntent
+
+    /** CHIEF generates a fresh invite token for the mission. */
+    data class IssueInvite(val missionId: String) : AdminIntent
+    /** CHIEF confirms a PENDING participant after out-of-band SAS verification. */
+    data class ConfirmParticipant(val missionId: String, val userId: String) : AdminIntent
+    /** CHIEF revokes an unredeemed invite token. */
+    data class RevokeInvite(val token: String) : AdminIntent
+    /** Dismiss the post-issuance panel without revoking. */
+    data object DismissActiveInvite : AdminIntent
+    /** Dismiss the inline error banner. */
+    data object DismissInviteError : AdminIntent
+    /** Dismiss the inline success banner. */
+    data object DismissSuccess : AdminIntent
 }
 
 // ─── Root composable ─────────────────────────────────────────────────────────
@@ -280,23 +310,90 @@ private fun MissionTypesTab(state: AdminUiState, onIntent: (AdminIntent) -> Unit
 
 @Composable
 private fun ClearanceTab(state: AdminUiState, onIntent: (AdminIntent) -> Unit) {
-    val userId = "user_local"
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
         Text(
-            "> CLEARANCE ASSIGNMENTS FOR CURRENT OPERATOR",
+            "> MISSION CLEARANCE MATRIX — ASSIGN RANKS PER OPERATOR",
             style = AstraTheme.Typography.labelSmall.copy(color = Color(0xFFACABAA).copy(0.6f), fontSize = 9.sp, fontFamily = FontFamily.Monospace),
         )
         Spacer(Modifier.height(12.dp))
+        state.inviteError?.let { err ->
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .background(AstraTheme.Error.copy(0.08f))
+                    .border(1.dp, AstraTheme.Error.copy(0.4f))
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "> $err",
+                    modifier = Modifier.weight(1f),
+                    style = AstraTheme.Typography.labelSmall.copy(
+                        color = AstraTheme.Error,
+                        fontSize = 10.sp,
+                        fontFamily = FontFamily.Monospace,
+                    ),
+                )
+                TextButton(
+                    onClick = { onIntent(AdminIntent.DismissInviteError) },
+                    shape = RectangleShape,
+                ) {
+                    Text(
+                        "DISMISS",
+                        style = AstraTheme.Typography.labelSmall.copy(
+                            color = AstraTheme.Error.copy(0.8f),
+                            fontSize = 9.sp,
+                            fontFamily = FontFamily.Monospace,
+                        ),
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+        state.successMessage?.let { msg ->
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .background(AstraTheme.Tertiary.copy(0.08f))
+                    .border(1.dp, AstraTheme.Tertiary.copy(0.4f))
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "> $msg",
+                    modifier = Modifier.weight(1f),
+                    style = AstraTheme.Typography.labelSmall.copy(
+                        color = AstraTheme.Tertiary,
+                        fontSize = 10.sp,
+                        fontFamily = FontFamily.Monospace,
+                    ),
+                )
+                TextButton(
+                    onClick = { onIntent(AdminIntent.DismissSuccess) },
+                    shape = RectangleShape,
+                ) {
+                    Text(
+                        "DISMISS",
+                        style = AstraTheme.Typography.labelSmall.copy(
+                            color = AstraTheme.Tertiary.copy(0.8f),
+                            fontSize = 9.sp,
+                            fontFamily = FontFamily.Monospace,
+                        ),
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+        }
         state.missions.forEach { mission ->
-            val assignment = state.clearances.find { it.userId == userId && it.missionId == mission.id }
-            val currentRank = state.ranks.find { it.id == assignment?.rankId }
-            var expanded by remember { mutableStateOf(false) }
+            val participantIds = mission.participantIds.ifEmpty { listOf(state.localUserId) }
+            var missionExpanded by remember(mission.id) { mutableStateOf(false) }
 
             Column(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)
                     .background(AstraTheme.SurfaceContainerLow)
                     .border(1.dp, AstraTheme.OutlineVariant.copy(0.1f)),
             ) {
+                // Mission header row
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -304,57 +401,411 @@ private fun ClearanceTab(state: AdminUiState, onIntent: (AdminIntent) -> Unit) {
                     Column(Modifier.weight(1f)) {
                         Text(mission.name.uppercase(), style = AstraTheme.Typography.labelSmall.copy(color = AstraTheme.OnSurface, fontWeight = FontWeight.Bold, fontSize = 11.sp))
                         Text(
-                            currentRank?.let { "RANK: ${it.name} (LVL ${it.level})" } ?: "UNASSIGNED",
-                            style = AstraTheme.Typography.labelSmall.copy(
-                                color = if (currentRank != null) AstraTheme.Primary else Color(0xFFACABAA),
-                                fontSize = 9.sp, fontFamily = FontFamily.Monospace,
-                            ),
+                            "${participantIds.size} PARTICIPANT${if (participantIds.size != 1) "S" else ""}",
+                            style = AstraTheme.Typography.labelSmall.copy(color = Color(0xFFACABAA), fontSize = 9.sp, fontFamily = FontFamily.Monospace),
                         )
                     }
-                    IconButton(onClick = { expanded = !expanded }, modifier = Modifier.size(32.dp)) {
+                    IconButton(onClick = { missionExpanded = !missionExpanded }, modifier = Modifier.size(32.dp)) {
                         Icon(
-                            if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                            if (missionExpanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
                             contentDescription = "Expand",
                             tint = AstraTheme.Primary.copy(0.7f),
                             modifier = Modifier.size(16.dp),
                         )
                     }
                 }
-                if (expanded) {
+                if (missionExpanded) {
                     Box(Modifier.fillMaxWidth().height(1.dp).background(AstraTheme.OutlineVariant.copy(0.1f)))
-                    Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("SELECT RANK:", style = AstraTheme.Typography.labelSmall.copy(color = Color(0xFFACABAA).copy(0.6f), fontSize = 9.sp))
-                        Spacer(Modifier.height(4.dp))
-                        state.ranks.forEach { rank ->
-                            val sel = rank.id == assignment?.rankId
-                            val (_, tc, _) = resolveColorTokenTriple(rank.color)
-                            Row(
-                                modifier = Modifier.fillMaxWidth()
-                                    .background(if (sel) tc.copy(0.08f) else Color.Transparent)
-                                    .border(1.dp, if (sel) tc.copy(0.3f) else AstraTheme.OutlineVariant.copy(0.1f))
-                                    .clickable { onIntent(AdminIntent.AssignClearance(userId, mission.id, rank.id)) }
-                                    .padding(horizontal = 10.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Box(Modifier.size(6.dp).background(tc, CircleShape))
-                                Spacer(Modifier.width(8.dp))
-                                Text("${rank.name}  LVL ${rank.level}", style = AstraTheme.Typography.labelSmall.copy(color = if (sel) tc else Color(0xFFACABAA), fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal, fontSize = 10.sp))
-                            }
+                    Column(Modifier.padding(horizontal = 14.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        participantIds.forEach { participantId ->
+                            ParticipantClearanceRow(
+                                participantId = participantId,
+                                isLocalUser = participantId == state.localUserId,
+                                missionId = mission.id,
+                                ranks = state.ranks,
+                                clearances = state.clearances,
+                                onIntent = onIntent,
+                            )
                         }
-                        if (assignment != null) {
-                            Spacer(Modifier.height(4.dp))
-                            TextButton(
-                                onClick = { onIntent(AdminIntent.UnassignClearance(userId, mission.id)) },
-                                shape = RectangleShape,
-                            ) {
-                                Text("> REMOVE CLEARANCE", style = AstraTheme.Typography.labelSmall.copy(color = AstraTheme.Error.copy(0.7f), fontSize = 9.sp, fontFamily = FontFamily.Monospace))
-                            }
+
+                        // Pending participants — operators who redeemed an invite
+                        // and are awaiting CHIEF confirmation. Each row shows the
+                        // SAS fingerprint that the inviter must verify out-of-band.
+                        mission.pendingParticipants.forEach { pending ->
+                            PendingParticipantRow(
+                                pending = pending,
+                                missionId = mission.id,
+                                onIntent = onIntent,
+                            )
                         }
+
+                        // Single action: generate an invite. The post-issuance panel
+                        // appears below for the issuing operator only (state.activeInvite).
+                        InviteActionRow(
+                            missionId = mission.id,
+                            activeInvite = state.activeInvite?.takeIf { it.missionId == mission.id },
+                            onIntent = onIntent,
+                        )
                     }
                 }
             }
         }
         Spacer(Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun ParticipantClearanceRow(
+    participantId: String,
+    isLocalUser: Boolean,
+    missionId: String,
+    ranks: List<com.explo.capstone.shared.Rank>,
+    clearances: List<com.explo.capstone.shared.ClearanceAssignment>,
+    onIntent: (AdminIntent) -> Unit,
+) {
+    val assignment = clearances.find { it.userId == participantId && it.missionId == missionId }
+    val currentRank = ranks.find { it.id == assignment?.rankId }
+    var rankExpanded by remember(participantId, missionId) { mutableStateOf(false) }
+    // Staged selection — clicking a rank only stages it; CONFIRM commits.
+    // Reset whenever the underlying server-side assignment changes.
+    var pendingRankId by remember(participantId, missionId, assignment?.rankId) {
+        mutableStateOf<String?>(null)
+    }
+    val effectiveRankId = pendingRankId ?: assignment?.rankId
+    val isDirty = pendingRankId != null && pendingRankId != assignment?.rankId
+
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .background(if (isLocalUser) AstraTheme.Primary.copy(0.04f) else Color.Transparent)
+            .border(1.dp, if (isLocalUser) AstraTheme.Primary.copy(0.2f) else AstraTheme.OutlineVariant.copy(0.1f))
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        if (isLocalUser) "YOU" else participantId.take(12).uppercase(),
+                        style = AstraTheme.Typography.labelSmall.copy(
+                            color = if (isLocalUser) AstraTheme.Primary else AstraTheme.OnSurface,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 10.sp,
+                            fontFamily = FontFamily.Monospace,
+                        )
+                    )
+                    if (isLocalUser) {
+                        Text("(LOCAL)", style = AstraTheme.Typography.labelSmall.copy(color = AstraTheme.Primary.copy(0.5f), fontSize = 8.sp, fontFamily = FontFamily.Monospace))
+                    }
+                }
+                Text(
+                    currentRank?.let { "${it.name}  LVL ${it.level}" } ?: "UNASSIGNED",
+                    style = AstraTheme.Typography.labelSmall.copy(
+                        color = if (currentRank != null) AstraTheme.Tertiary else Color(0xFFACABAA).copy(0.5f),
+                        fontSize = 9.sp, fontFamily = FontFamily.Monospace,
+                    )
+                )
+            }
+            IconButton(onClick = { rankExpanded = !rankExpanded }, modifier = Modifier.size(28.dp)) {
+                Icon(
+                    if (rankExpanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                    contentDescription = null,
+                    tint = AstraTheme.Primary.copy(0.6f),
+                    modifier = Modifier.size(14.dp),
+                )
+            }
+        }
+        if (rankExpanded) {
+            Box(Modifier.fillMaxWidth().height(1.dp).background(AstraTheme.OutlineVariant.copy(0.08f)))
+            Column(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                ranks.forEach { rank ->
+                    val sel = rank.id == effectiveRankId
+                    val isStaged = isDirty && rank.id == pendingRankId
+                    val (_, tc, _) = resolveColorTokenTriple(rank.color)
+                    Row(
+                        Modifier.fillMaxWidth()
+                            .background(if (sel) tc.copy(if (isStaged) 0.15f else 0.08f) else Color.Transparent)
+                            .border(1.dp, if (sel) tc.copy(if (isStaged) 0.6f else 0.3f) else AstraTheme.OutlineVariant.copy(0.1f))
+                            .clickable { pendingRankId = rank.id }
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(Modifier.size(6.dp).background(tc, CircleShape))
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "${rank.name}  LVL ${rank.level}",
+                            style = AstraTheme.Typography.labelSmall.copy(
+                                color = if (sel) tc else Color(0xFFACABAA),
+                                fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal,
+                                fontSize = 10.sp,
+                            )
+                        )
+                        if (isStaged) {
+                            Spacer(Modifier.weight(1f))
+                            Text(
+                                "[ PENDING ]",
+                                style = AstraTheme.Typography.labelSmall.copy(
+                                    color = tc,
+                                    fontSize = 8.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = FontFamily.Monospace,
+                                    letterSpacing = 1.sp,
+                                ),
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
+                // Confirm + remove actions row. CONFIRM only enabled when the
+                // staged selection differs from the server-side assignment.
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            pendingRankId?.let { rid ->
+                                onIntent(AdminIntent.AssignClearance(participantId, missionId, rid))
+                            }
+                        },
+                        enabled = isDirty,
+                        shape = RectangleShape,
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            if (isDirty) AstraTheme.Primary else AstraTheme.OutlineVariant.copy(0.3f),
+                        ),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(
+                            if (isDirty) "> CONFIRM" else "> NO CHANGES",
+                            style = AstraTheme.Typography.labelSmall.copy(
+                                color = if (isDirty) AstraTheme.Primary else AstraTheme.OutlineVariant,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace,
+                            ),
+                        )
+                    }
+                    if (assignment != null) {
+                        OutlinedButton(
+                            onClick = { onIntent(AdminIntent.UnassignClearance(participantId, missionId)) },
+                            shape = RectangleShape,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, AstraTheme.Error.copy(0.5f)),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                        ) {
+                            Text(
+                                "> REMOVE",
+                                style = AstraTheme.Typography.labelSmall.copy(
+                                    color = AstraTheme.Error,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 10.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                ),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ─── Pending participant row ─────────────────────────────────────────────────
+
+@Composable
+private fun PendingParticipantRow(
+    pending: PendingParticipant,
+    missionId: String,
+    onIntent: (AdminIntent) -> Unit,
+) {
+    val accent = AstraTheme.Secondary  // amber — work-in-progress
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .background(accent.copy(0.05f))
+            .border(1.dp, accent.copy(0.3f)),
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        if (pending.callsign.isNotBlank()) pending.callsign.uppercase() else pending.userId.take(12).uppercase(),
+                        style = AstraTheme.Typography.labelSmall.copy(
+                            color = AstraTheme.OnSurface,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 10.sp,
+                            fontFamily = FontFamily.Monospace,
+                        ),
+                    )
+                    Text(
+                        "[ PENDING ]",
+                        style = AstraTheme.Typography.labelSmall.copy(
+                            color = accent,
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Monospace,
+                        ),
+                    )
+                }
+                Text(
+                    "FINGERPRINT  ${pending.fingerprint.ifBlank { "—" }}",
+                    style = AstraTheme.Typography.labelSmall.copy(
+                        color = accent.copy(0.85f),
+                        fontSize = 9.sp,
+                        fontFamily = FontFamily.Monospace,
+                    ),
+                )
+                Text(
+                    "VERIFY OUT-OF-BAND BEFORE CONFIRMING",
+                    style = AstraTheme.Typography.labelSmall.copy(
+                        color = Color(0xFFACABAA).copy(0.6f),
+                        fontSize = 8.sp,
+                        fontFamily = FontFamily.Monospace,
+                    ),
+                )
+            }
+            OutlinedButton(
+                onClick = { onIntent(AdminIntent.ConfirmParticipant(missionId, pending.userId)) },
+                shape = RectangleShape,
+                border = androidx.compose.foundation.BorderStroke(1.dp, accent),
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+            ) {
+                Text(
+                    "> CONFIRM",
+                    style = AstraTheme.Typography.labelSmall.copy(
+                        color = accent,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 9.sp,
+                        fontFamily = FontFamily.Monospace,
+                    ),
+                )
+            }
+        }
+    }
+}
+
+// ─── Generate-invite action + post-issuance panel ────────────────────────────
+
+@Composable
+private fun InviteActionRow(
+    missionId: String,
+    activeInvite: ActiveInvite?,
+    onIntent: (AdminIntent) -> Unit,
+) {
+    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+
+    if (activeInvite == null) {
+        Row(
+            Modifier.fillMaxWidth().padding(top = 4.dp),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            OutlinedButton(
+                onClick = { onIntent(AdminIntent.IssueInvite(missionId)) },
+                shape = RectangleShape,
+                border = androidx.compose.foundation.BorderStroke(1.dp, AstraTheme.Tertiary.copy(0.5f)),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+            ) {
+                Text(
+                    "> GENERATE INVITE",
+                    style = AstraTheme.Typography.labelSmall.copy(
+                        color = AstraTheme.Tertiary,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.sp,
+                        fontFamily = FontFamily.Monospace,
+                    ),
+                )
+            }
+        }
+        return
+    }
+
+    // Active invite panel — token + QR + actions. Shown only on the issuing
+    // operator's device (driven by state.activeInvite.missionId == this mission).
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .background(AstraTheme.Tertiary.copy(0.04f))
+            .border(1.dp, AstraTheme.Tertiary.copy(0.4f))
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(
+            "// INVITE ISSUED",
+            style = AstraTheme.Typography.labelSmall.copy(
+                color = AstraTheme.Tertiary,
+                fontWeight = FontWeight.Bold,
+                fontSize = 11.sp,
+                fontFamily = FontFamily.Monospace,
+            ),
+        )
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            Box(
+                Modifier
+                    .background(Color.White)
+                    .padding(6.dp),
+            ) {
+                QrCodeImage(content = activeInvite.uri, sizeDp = 200)
+            }
+        }
+        Text(
+            "TOKEN  ${activeInvite.token}",
+            style = AstraTheme.Typography.labelSmall.copy(
+                color = AstraTheme.OnSurface,
+                fontSize = 11.sp,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.5.sp,
+            ),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Text(
+            "EXPIRES  ${activeInvite.expiresAtIso}",
+            style = AstraTheme.Typography.labelSmall.copy(
+                color = Color(0xFFACABAA).copy(0.7f),
+                fontSize = 8.sp,
+                fontFamily = FontFamily.Monospace,
+            ),
+        )
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            OutlinedButton(
+                onClick = {
+                    clipboard.setText(androidx.compose.ui.text.AnnotatedString(activeInvite.token))
+                },
+                shape = RectangleShape,
+                border = androidx.compose.foundation.BorderStroke(1.dp, AstraTheme.Primary.copy(0.4f)),
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                modifier = Modifier.weight(1f),
+            ) {
+                Text("> COPY", style = AstraTheme.Typography.labelSmall.copy(color = AstraTheme.Primary, fontSize = 9.sp, fontFamily = FontFamily.Monospace))
+            }
+            OutlinedButton(
+                onClick = { onIntent(AdminIntent.RevokeInvite(activeInvite.token)) },
+                shape = RectangleShape,
+                border = androidx.compose.foundation.BorderStroke(1.dp, AstraTheme.Error.copy(0.4f)),
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                modifier = Modifier.weight(1f),
+            ) {
+                Text("> REVOKE", style = AstraTheme.Typography.labelSmall.copy(color = AstraTheme.Error, fontSize = 9.sp, fontFamily = FontFamily.Monospace))
+            }
+            OutlinedButton(
+                onClick = { onIntent(AdminIntent.DismissActiveInvite) },
+                shape = RectangleShape,
+                border = androidx.compose.foundation.BorderStroke(1.dp, AstraTheme.OutlineVariant),
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                modifier = Modifier.weight(1f),
+            ) {
+                Text("> CLOSE", style = AstraTheme.Typography.labelSmall.copy(color = Color(0xFFACABAA), fontSize = 9.sp, fontFamily = FontFamily.Monospace))
+            }
+        }
     }
 }
 

@@ -2,7 +2,6 @@ package com.explo.capstone
 
 import android.app.Application
 import com.explo.capstone.shared.AppContainer
-import com.explo.capstone.shared.data.SeedData
 
 /**
  * Application subclass — instantiates [AppContainer] once and reuses across all activities.
@@ -10,20 +9,27 @@ import com.explo.capstone.shared.data.SeedData
  */
 class AstraApp : Application() {
 
-    lateinit var container: AppContainer
+    // Nullable so callers can detect init failure (e.g. EncryptedSharedPreferences keyset
+    // mismatch after a purge) and route to TerminatedScreen instead of crashing.
+    var containerOrNull: AppContainer? = null
         private set
+
+    val container: AppContainer
+        get() = containerOrNull ?: error("AppContainer not initialized")
 
     override fun onCreate() {
         super.onCreate()
-        container = AppContainer(this)
+        runCatching {
+            val c = AppContainer(this)
+            containerOrNull = c
 
-        val snapshot = container.persistenceManager.load()
-        if (snapshot != null) {
-            // Restore persisted state — skip seeding
-            container.loadSnapshot(snapshot)
-        } else if (BuildConfig.DEBUG) {
-            // Fresh install or after clear-data: populate with seed data
-            SeedData.seed(container.store)
+            // Restore cached state (missions, channels, schema from last sync) for offline resilience.
+            // The AppContainer startup coroutine calls syncFromServer() immediately after, which
+            // overwrites this with fresh server data if a JWT is present.
+            val snapshot = c.persistenceManager.load()
+            if (snapshot != null) c.loadSnapshot(snapshot)
+        }.onFailure { e ->
+            android.util.Log.e("AstraApp", "Failed to initialize AppContainer", e)
         }
     }
 }

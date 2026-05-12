@@ -86,6 +86,10 @@ dependencies {
     implementation(libs.retrofit.converter.gson)
     implementation(libs.gson)
 
+    // QR code: invite display (encode) + in-app scanner (CaptureActivity)
+    implementation(libs.zxing.android.embedded)
+    implementation(libs.zxing.core)
+
     // Android Security for Keystore + EncryptedSharedPreferences (Sandrani)
     implementation(libs.androidx.security.crypto)
 

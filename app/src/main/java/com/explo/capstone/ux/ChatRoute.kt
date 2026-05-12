@@ -5,11 +5,14 @@ import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -24,7 +27,6 @@ import com.explo.capstone.shared.DecryptedIncomingMessage
 import com.explo.capstone.shared.Severity
 import com.explo.capstone.ui.*
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -42,17 +44,12 @@ class ChatViewModel(
     private val container: AppContainer,
 ) : ViewModel() {
 
-    companion object {
-        private const val ROTATION_INTERVAL_MS = 5 * 60 * 1000L
-    }
-
     private val _state = MutableStateFlow<ChatUiState>(ChatUiState.Loading)
     val state: StateFlow<ChatUiState> = _state.asStateFlow()
 
     // Mutable chat item list — owned by this VM, not derived from store
     private val chatItems = mutableListOf<ChatItem>()
 
-    private var nextRotationMs = System.currentTimeMillis() + ROTATION_INTERVAL_MS
     private var missionKeyAlias = ""
     private var callsign = "OPERATOR"
     // UUID from IdentityManager — used as the Signal protocol address so the server
@@ -62,8 +59,12 @@ class ChatViewModel(
 
     init {
         viewModelScope.launch { initializeChat() }
-        viewModelScope.launch { tickRotationTimer() }
     }
+
+    // ─── Callsign resolution ──────────────────────────────────────────────────
+
+    private fun resolveCallsign(senderId: String): String =
+        (container.userDisplayNames[senderId] ?: senderId.take(8)).uppercase()
 
     // ─── Initialization ───────────────────────────────────────────────────────
 
@@ -77,17 +78,30 @@ class ChatViewModel(
         missionKeyAlias = mission.missionKeyAlias
         val degraded = mutableSetOf<DegradedSubsystem>()
 
-        runCatching { container.cryptoEngine.generateMissionKey(missionKeyAlias) }
-            .onFailure { degraded.add(DegradedSubsystem.CRYPTO) }
-
         val identity = runCatching { container.identityManager.getUserIdentity() }.getOrNull()
-        callsign = identity?.displayName?.uppercase() ?: "OPERATOR"
-        userId = identity?.id ?: callsign   // fall back to callsign if not yet provisioned
-        userClearanceLevel = container.clearanceRepository.clearanceFor("user_local", missionId).value?.level ?: 0
+        if (identity == null) {
+            _state.value = ChatUiState.Error("> IDENTITY_NOT_PROVISIONED // COMPLETE SETUP FIRST")
+            return
+        }
+        callsign = identity.displayName.uppercase()
+        userId = identity.id
+        userClearanceLevel = container.clearanceRepository.clearanceFor(userId, missionId).value?.level ?: 0
 
         // Register this device as a channel member so others can send us messages
         runCatching { container.serverClient.joinChannel(channelId) }
             .onFailure { container.securityEventLog.emit(Severity.WARN, "Chat", "JOIN_CHANNEL_FAILED // $channelId") }
+
+        // Restore persisted messages for this channel (plaintext survived in snapshot)
+        container.store.messages.value
+            .filter { it.channelId == channelId && it.plaintextContent.isNotEmpty() }
+            .sortedBy { it.timestampMs }
+            .forEach { msg ->
+                if (msg.senderId == userId) {
+                    chatItems.add(ChatItem.Outgoing(msg.id, msg.timestampMs, msg.plaintextContent, DeliveryState.SENT))
+                } else {
+                    chatItems.add(ChatItem.Incoming(msg.id, msg.timestampMs, resolveCallsign(msg.senderId), msg.plaintextContent, true))
+                }
+            }
 
         // Observe incoming decrypted messages from the server WebSocket
         viewModelScope.launch {
@@ -100,7 +114,7 @@ class ChatViewModel(
                         ChatItem.Incoming(
                             id = incoming.messageId,
                             timestampMs = incoming.timestampMs,
-                            sender = incoming.senderId,
+                            sender = resolveCallsign(incoming.senderId),
                             plaintext = text,
                             decryptOk = true,
                         )
@@ -132,50 +146,12 @@ class ChatViewModel(
                 sendEnabled = false,
                 clearanceWarning = clearanceWarning,
             ),
-            keyRotation = KeyRotationState(nextRotationMs, ROTATION_INTERVAL_MS),
+            keyRotation = KeyRotationState(0L, 0L),
             degraded = degraded,
         )
 
-        addSystemItem("SECURE SESSION ESTABLISHED // PROTOCOL 3.4")
+        addSystemItem("SECURE SESSION ESTABLISHED // SIGNAL PROTOCOL")
         container.securityEventLog.emit(Severity.INFO, "Chat", "SESSION_OPENED // $channelId")
-    }
-
-    // ─── Key rotation timer ───────────────────────────────────────────────────
-
-    private suspend fun tickRotationTimer() {
-        while (true) {
-            delay(1000)
-            val content = _state.value as? ChatUiState.Content ?: continue
-            val now = System.currentTimeMillis()
-
-            if (now >= nextRotationMs) {
-                val degraded = content.degraded.toMutableSet()
-                runCatching {
-                    val newAlias = container.cryptoEngine.rotateMissionKey(missionKeyAlias)
-                    missionKeyAlias = newAlias
-                    container.store.updateMissions { list ->
-                        list.map { if (it.id == missionId) it.copy(missionKeyAlias = newAlias) else it }
-                    }
-                    degraded.remove(DegradedSubsystem.CRYPTO)
-                    container.securityEventLog.emit(Severity.INFO, "Chat", "KEY_ROTATED // $missionKeyAlias")
-                }.onFailure {
-                    degraded.add(DegradedSubsystem.CRYPTO)
-                    container.securityEventLog.emit(Severity.WARN, "Chat", "KEY_ROTATE_FAILED")
-                }
-
-                nextRotationMs = now + ROTATION_INTERVAL_MS
-                addSystemItem("CHANNEL KEY ROTATED // NEXT ROTATION IN 05:00")
-                _state.value = content.copy(
-                    messages = chatItems.toList(),
-                    keyRotation = KeyRotationState(nextRotationMs, ROTATION_INTERVAL_MS),
-                    degraded = degraded,
-                )
-            } else {
-                _state.value = content.copy(
-                    keyRotation = KeyRotationState(nextRotationMs, ROTATION_INTERVAL_MS),
-                )
-            }
-        }
     }
 
     // ─── Intent handler ───────────────────────────────────────────────────────
@@ -219,10 +195,6 @@ class ChatViewModel(
             )
             val deliveryState = if (result.isSuccess) DeliveryState.SENT else DeliveryState.FAILED
             updateOutgoing(outgoingId, deliveryState)
-            if (deliveryState == DeliveryState.SENT) {
-                delay(200)
-                updateOutgoing(outgoingId, DeliveryState.DELIVERED)
-            }
             if (result.isFailure) {
                 container.securityEventLog.emit(Severity.WARN, "Chat", "SEND_FAILED // ${result.exceptionOrNull()?.message}")
             }
@@ -246,10 +218,6 @@ class ChatViewModel(
             )
             val deliveryState = if (result.isSuccess) DeliveryState.SENT else DeliveryState.FAILED
             updateOutgoing(outgoingId, deliveryState)
-            if (deliveryState == DeliveryState.SENT) {
-                delay(200)
-                updateOutgoing(outgoingId, DeliveryState.DELIVERED)
-            }
         }
     }
 
@@ -263,29 +231,19 @@ class ChatViewModel(
     // ─── Incoming inject (debug only) ─────────────────────────────────────────
 
     fun injectIncoming() {
-        viewModelScope.launch {
-            val fakeText = "REMOTE_SIGNAL_${System.currentTimeMillis() % 10_000}"
-            var plaintext = "[ CIPHERTEXT // INTEGRITY_FAIL ]"
-            var decryptOk = false
-
-            runCatching {
-                val ct = container.cryptoEngine.encryptMessage(missionKeyAlias, fakeText.encodeToByteArray())
-                val pt = container.cryptoEngine.decryptMessage(missionKeyAlias, ct)
-                plaintext = pt.decodeToString()
-                decryptOk = true
-            }
-
-            chatItems.add(
-                ChatItem.Incoming(
-                    id = "in-${System.currentTimeMillis()}",
-                    timestampMs = System.currentTimeMillis(),
-                    sender = "REMOTE_AGENT",
-                    plaintext = plaintext,
-                    decryptOk = decryptOk,
-                )
+        // Injects a plaintext item directly — tests chat UI rendering without
+        // going through Signal crypto (missions from server have no AES keystore key).
+        val fakeText = "[ DEBUG_INJECT ] REMOTE_SIGNAL_${System.currentTimeMillis() % 10_000}"
+        chatItems.add(
+            ChatItem.Incoming(
+                id = "in-${System.currentTimeMillis()}",
+                timestampMs = System.currentTimeMillis(),
+                sender = "REMOTE_AGENT",
+                plaintext = fakeText,
+                decryptOk = true,
             )
-            updateChatItems()
-        }
+        )
+        updateChatItems()
     }
 
     // ─── Attach document ──────────────────────────────────────────────────────
@@ -398,6 +356,7 @@ class ChatViewModel(
 
 // ─── Route ────────────────────────────────────────────────────────────────────
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatRoute(
     channelId: String,
@@ -406,11 +365,14 @@ fun ChatRoute(
     selectedTab: NavTab,
     onTabSelect: (NavTab) -> Unit,
     onBack: () -> Unit,
+    onProfileClick: (() -> Unit)? = null,
 ) {
     val vm: ChatViewModel = viewModel(factory = ChatViewModel.Factory(channelId, missionId, container))
     val state by vm.state.collectAsStateWithLifecycle()
     val decryptedDoc by vm.decryptedDoc.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    var isRefreshing by remember { mutableStateOf(false) }
 
     // File picker launcher
     val attachLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
@@ -432,13 +394,11 @@ fun ChatRoute(
         onTabSelect = onTabSelect,
         topBarContent = {
             val content = state as? ChatUiState.Content
-            val remaining = (content?.keyRotation?.nextRotationMs ?: 0L) - System.currentTimeMillis()
-            val mins = (remaining / 60_000L).coerceAtLeast(0L)
-            val secs = ((remaining % 60_000L) / 1_000L).coerceAtLeast(0L)
             AstraTopBar(
                 titleOverride = content?.channel?.name?.uppercase() ?: "SECURE CHAT",
-                callsign = "KEY: %02d:%02d".format(mins, secs),
-                clearanceLabel = "E2E_ENCRYPTED",
+                callsign = "SIGNAL E2E",
+                clearanceLabel = "DOUBLE_RATCHET",
+                onProfileClick = onProfileClick,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -452,17 +412,29 @@ fun ChatRoute(
         },
     ) { padding ->
         Box(Modifier.padding(padding)) {
-            ChatContent(
-                state = state,
-                onIntent = { intent ->
-                    when (intent) {
-                        is ChatIntent.Back    -> onBack()
-                        is ChatIntent.AttachTap -> attachLauncher.launch("*/*")
-                        else                  -> vm.handle(intent)
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = {
+                    coroutineScope.launch {
+                        isRefreshing = true
+                        container.syncFromServer()
+                        isRefreshing = false
                     }
                 },
-                onInjectIncoming = if (BuildConfig.DEBUG) ({ vm.injectIncoming() }) else null,
-            )
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                ChatContent(
+                    state = state,
+                    onIntent = { intent ->
+                        when (intent) {
+                            is ChatIntent.Back    -> onBack()
+                            is ChatIntent.AttachTap -> attachLauncher.launch("*/*")
+                            else                  -> vm.handle(intent)
+                        }
+                    },
+                    onInjectIncoming = if (BuildConfig.DEBUG) ({ vm.injectIncoming() }) else null,
+                )
+            }
         }
     }
 }

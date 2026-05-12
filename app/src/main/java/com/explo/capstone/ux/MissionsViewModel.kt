@@ -12,6 +12,7 @@ import com.explo.capstone.shared.data.entity.MissionRepository
 import com.explo.capstone.shared.data.log.SecurityEventLog
 import com.explo.capstone.shared.data.schema.MissionTypeRepository
 import com.explo.capstone.identity.IdentityManager
+import com.explo.capstone.transport.MessageTransport
 import com.explo.capstone.ui.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -29,6 +30,7 @@ class MissionsViewModel(
     private val channelRepository: ChannelRepository,
     private val identityManager: IdentityManager,
     private val securityEventLog: SecurityEventLog,
+    private val serverClient: MessageTransport,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<MissionsUiState>(MissionsUiState.Loading)
@@ -43,6 +45,7 @@ class MissionsViewModel(
 
     // Degraded subsystems
     private val degraded = mutableSetOf<DegradedSubsystem>()
+    private var localUserId: String = ""
 
     init {
         loadIdentity()
@@ -54,6 +57,7 @@ class MissionsViewModel(
             val result = safeCall { identityManager.getUserIdentity() }
             result.onSuccess { user ->
                 if (user != null) {
+                    localUserId = user.id
                     _callsign.value = user.displayName.uppercase()
                     _clearanceLabel.value = "KEY_${user.hardwareKeyId.take(8).uppercase()}"
                 }
@@ -68,8 +72,9 @@ class MissionsViewModel(
             combine(
                 missionRepository.missions,
                 missionTypeRepository.types,
-            ) { missions, types ->
-                buildContentState(missions, types)
+                serverClient.connectionState,
+            ) { missions, types, connected ->
+                buildContentState(missions, types, connected)
             }.collect { _state.value = it }
         }
     }
@@ -77,9 +82,14 @@ class MissionsViewModel(
     private fun buildContentState(
         missions: List<Mission>,
         types: List<MissionType>,
+        connected: Boolean = serverClient.isConnected,
     ): MissionsUiState {
         if (missions.isEmpty()) {
-            return MissionsUiState.Empty("No missions assigned. Await further orders.")
+            return MissionsUiState.Empty(
+                reason = "No missions assigned. Await further orders.",
+                missionTypes = types,
+                localUserId = localUserId,
+            )
         }
 
         val typeMap = types.associateBy { it.id }
@@ -95,51 +105,70 @@ class MissionsViewModel(
             )
         }
 
-        // Derive summary from live data
-        val activeMissions = missions.count { it.status == com.explo.capstone.shared.MissionStatus.ACTIVE }
+        val signal = when {
+            !connected          -> SignalStrength.OFFLINE
+            degraded.isEmpty()  -> SignalStrength.STABLE
+            else                -> SignalStrength.DEGRADED
+        }
+
         val summary = DashboardSummary(
             activeLinks = rows.sumOf { it.channelCount },
-            maxLinks = rows.sumOf { it.channelCount } + 2, // slight headroom
-            signal = if (degraded.isEmpty()) SignalStrength.STABLE else SignalStrength.DEGRADED,
-            encryption = "AES-256",
-            uplinkId = "UPLINK_04",
+            maxLinks = rows.sumOf { it.channelCount } + 2,
+            signal = signal,
+            encryption = "SIGNAL E2E",
+            uplinkId = if (connected) "ONLINE" else "OFFLINE",
         )
 
-        // System logs from event log
         val logs = securityEventLog.recent(3).map { evt ->
             "> [${evt.source.uppercase()}]: ${evt.text}"
-        }.ifEmpty {
-            listOf(
-                "> [SYSTEM]: MISSION DATA LOADED FROM LOCAL STORE",
-                "> [SECURE]: ALL KEYS VERIFIED",
-                "> [SIGNAL]: OPERATIONAL LIMITS CLEAR",
-            )
         }
 
         return MissionsUiState.Content(
             missions = rows,
             summary = summary,
             systemLogs = logs,
+            missionTypes = types,
             degraded = degraded.toSet(),
+            localUserId = localUserId,
         )
     }
 
     fun handle(intent: MissionsIntent) {
         when (intent) {
             is MissionsIntent.Refresh -> {
-                // In-memory store: no-op refresh, but emit a log event
                 securityEventLog.emit(Severity.INFO, "System", "MANUAL REFRESH REQUESTED")
-                observeMissions() // re-subscribe
+                observeMissions()
             }
             is MissionsIntent.Open -> {
-                // Navigation handled by the route layer — this is a pass-through
                 securityEventLog.emit(Severity.INFO, "System", "MISSION_ACCESS // ${intent.missionId}")
             }
             is MissionsIntent.EmergencyOverride -> {
                 securityEventLog.emit(Severity.ALERT, "System", "EMERGENCY_OVERRIDE // ${intent.missionId}")
             }
-            is MissionsIntent.NavigateToProfile -> {
-                // Navigation handled by route layer
+            is MissionsIntent.NavigateToProfile -> {}
+            is MissionsIntent.NavigateToRedeem  -> {} // handled by the route composable
+            is MissionsIntent.ShowCreateSheet -> {
+                when (val s = _state.value) {
+                    is MissionsUiState.Content -> _state.value = s.copy(showCreateSheet = true)
+                    is MissionsUiState.Empty   -> _state.value = s.copy(showCreateSheet = true)
+                    else -> {}
+                }
+            }
+            is MissionsIntent.DismissCreateSheet -> {
+                when (val s = _state.value) {
+                    is MissionsUiState.Content -> _state.value = s.copy(showCreateSheet = false)
+                    is MissionsUiState.Empty   -> _state.value = s.copy(showCreateSheet = false)
+                    else -> {}
+                }
+            }
+            is MissionsIntent.CreateMission -> {
+                handle(MissionsIntent.DismissCreateSheet)
+                viewModelScope.launch {
+                    val creatorId = runCatching { identityManager.getUserIdentity()?.id }.getOrNull() ?: ""
+                    runCatching { missionRepository.create(intent.name, intent.typeId, createdBy = creatorId) }
+                        .onSuccess { securityEventLog.emit(Severity.INFO, "Missions", "MISSION_CREATED // ${intent.name}") }
+                        .onFailure { securityEventLog.emit(Severity.WARN, "Missions", "MISSION_CREATE_FAILED // ${it.message}") }
+                }
             }
         }
     }
@@ -174,6 +203,7 @@ class MissionsViewModel(
                 channelRepository = container.channelRepository,
                 identityManager = container.identityManager,
                 securityEventLog = container.securityEventLog,
+                serverClient = container.serverClient,
             ) as T
         }
     }

@@ -4,6 +4,10 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Camera is requested at runtime when the operator scans an invite QR. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
     <application
         android:networkSecurityConfig="@xml/network_security_config"
         android:name=".AstraApp"

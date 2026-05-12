@@ -211,7 +211,7 @@ fun MissionCard(
         
         Spacer(modifier = Modifier.height(16.dp))
         AstraButtonPrimary(
-            text = "> $actionText",
+            text = actionText,
             onClick = onClick,
             modifier = Modifier.fillMaxWidth()
         )

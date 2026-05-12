@@ -2,11 +2,10 @@ package com.explo.capstone.shared.data.entity
 
 import com.explo.capstone.shared.Channel
 import com.explo.capstone.shared.data.InMemoryStore
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
+import com.explo.capstone.transport.AstraApiClient
+import com.explo.capstone.transport.toDomain
 import kotlinx.coroutines.flow.MutableStateFlow
-import java.util.UUID
+import kotlinx.coroutines.flow.StateFlow
 
 // ─── Interface ───────────────────────────────────────────────────────────────
 
@@ -19,6 +18,7 @@ interface ChannelRepository {
         categoryId: String,
         minClearanceToView: Int? = null,
         minClearanceToPost: Int? = null,
+        createdBy: String = "",
     ): Channel
     suspend fun get(channelId: String): Channel?
     suspend fun updateClearance(channelId: String, view: Int, post: Int)
@@ -28,7 +28,10 @@ interface ChannelRepository {
 
 // ─── In-memory implementation ────────────────────────────────────────────────
 
-class InMemoryChannelRepository(private val store: InMemoryStore) : ChannelRepository {
+class InMemoryChannelRepository(
+    private val store: InMemoryStore,
+    private val remote: AstraApiClient? = null,
+) : ChannelRepository {
 
     // Cache derived flows per mission to avoid re-creating on each call
     private val missionFlows = mutableMapOf<String, MutableStateFlow<List<Channel>>>()
@@ -53,9 +56,21 @@ class InMemoryChannelRepository(private val store: InMemoryStore) : ChannelRepos
         categoryId: String,
         minClearanceToView: Int?,
         minClearanceToPost: Int?,
+        createdBy: String,
     ): Channel {
+        val remote = this.remote
+        if (remote != null) {
+            val dto = remote.createChannel(
+                missionId, name, description, categoryId, minClearanceToView, minClearanceToPost
+            ).getOrThrow()
+            val channel = dto.toDomain()
+            store.updateChannels { it + channel }
+            refreshMissionFlows()
+            return channel
+        }
+        // Offline / local-only fallback
         val channel = Channel(
-            id = "CH-${UUID.randomUUID().toString().take(8).uppercase()}",
+            id = "CH-LOCAL-${System.currentTimeMillis()}",
             missionId = missionId,
             name = name,
             description = description,
@@ -63,6 +78,7 @@ class InMemoryChannelRepository(private val store: InMemoryStore) : ChannelRepos
             minClearanceToView = minClearanceToView ?: 1,
             minClearanceToPost = minClearanceToPost ?: 1,
             createdAtMs = System.currentTimeMillis(),
+            createdBy = createdBy,
         )
         store.updateChannels { it + channel }
         refreshMissionFlows()
@@ -73,6 +89,7 @@ class InMemoryChannelRepository(private val store: InMemoryStore) : ChannelRepos
         store.channels.value.find { it.id == channelId }
 
     override suspend fun updateClearance(channelId: String, view: Int, post: Int) {
+        remote?.updateChannelClearance(channelId, view, post)?.getOrThrow()
         store.updateChannels { list ->
             list.map {
                 if (it.id == channelId) it.copy(minClearanceToView = view, minClearanceToPost = post)
@@ -83,6 +100,7 @@ class InMemoryChannelRepository(private val store: InMemoryStore) : ChannelRepos
     }
 
     override suspend fun delete(channelId: String) {
+        remote?.deleteChannel(channelId)?.getOrThrow()
         store.updateChannels { list -> list.filter { it.id != channelId } }
         refreshMissionFlows()
     }

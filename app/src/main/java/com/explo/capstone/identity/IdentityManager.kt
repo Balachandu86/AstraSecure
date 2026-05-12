@@ -11,6 +11,7 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.explo.capstone.shared.EncryptedDocument
 import com.explo.capstone.shared.User
+import java.io.File
 import java.security.KeyPairGenerator
 import java.security.KeyStore
 import java.security.spec.ECGenParameterSpec
@@ -20,15 +21,22 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
+/** Metadata for a single vault entry. */
+data class VaultEntry(
+    val docId: String,
+    val missionId: String,
+    val fileName: String,
+    val createdMs: Long,
+)
+
 /**
  * Owner: Sandrani Balachandu
  * Responsible for: Hardware-bound user identity via Android Keystore and encrypted document vault.
  */
 class IdentityManager(private val context: Context) {
 
-    // In-memory vault: documentId → encrypted payload (12-byte IV + GCM ciphertext)
-    private val docVault = mutableMapOf<String, ByteArray>()
-    private val docMeta  = mutableMapOf<String, Triple<String, String, Long>>() // id → (missionId, fileName, createdMs)
+    // Warm cache: documentId → encrypted payload (12-byte IV + GCM ciphertext)
+    private val docCache = mutableMapOf<String, ByteArray>()
 
     /**
      * First-time setup: create a hardware-backed key pair and persist a User record.
@@ -54,6 +62,13 @@ class IdentityManager(private val context: Context) {
             .apply()
 
         return user
+    }
+
+    /**
+     * Update the operator's display name (callsign).
+     */
+    fun updateDisplayName(newName: String) {
+        getEncryptedPrefs().edit().putString("display_name", newName).apply()
     }
 
     /**
@@ -92,10 +107,12 @@ class IdentityManager(private val context: Context) {
     /**
      * Encrypt and store a document in the local Keystore-backed vault.
      * Each document gets its own AES-256-GCM key under alias "astra_doc_{id}".
+     * Encrypted bytes are persisted to disk so they survive process restarts.
      */
     fun storeDocument(missionId: String, fileName: String, fileBytes: ByteArray): EncryptedDocument {
         val docId = "DOC-${UUID.randomUUID().toString().take(8).uppercase()}"
         val keyAlias = "astra_doc_$docId"
+        val createdMs = System.currentTimeMillis()
 
         val keyGen = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
         keyGen.init(
@@ -115,8 +132,16 @@ class IdentityManager(private val context: Context) {
         val encrypted = cipher.doFinal(fileBytes)
         val payload = iv + encrypted
 
-        docVault[docId] = payload
-        docMeta[docId]  = Triple(missionId, fileName, System.currentTimeMillis())
+        // Persist encrypted bytes to disk
+        vaultFile(docId).also { it.parentFile?.mkdirs() }.writeBytes(payload)
+
+        // Persist metadata: missionId|createdMs|fileName (filename last so | in names is safe)
+        getEncryptedPrefs().edit()
+            .putString("vault_meta_$docId", "$missionId|$createdMs|$fileName")
+            .apply()
+
+        // Warm the cache
+        docCache[docId] = payload
 
         val userId = runCatching { getUserIdentity()?.id }.getOrElse { null } ?: "UNKNOWN"
         return EncryptedDocument(
@@ -125,16 +150,18 @@ class IdentityManager(private val context: Context) {
             ownerUserId = userId,
             encryptedBytes = payload,
             fileName = fileName,
-            createdAtMs = System.currentTimeMillis(),
+            createdAtMs = createdMs,
         )
     }
 
     /**
      * Retrieve and decrypt a document from the vault.
-     * Throws [NoSuchElementException] if the document was never stored in this session.
+     * Falls back to disk if the warm cache is cold (e.g. after a process restart).
      */
     fun retrieveDocument(documentId: String): ByteArray {
-        val payload  = docVault[documentId] ?: throw NoSuchElementException("Document $documentId not in vault")
+        val payload = docCache[documentId]
+            ?: vaultFile(documentId).takeIf { it.exists() }?.readBytes()?.also { docCache[documentId] = it }
+            ?: throw NoSuchElementException("Document $documentId not found in vault")
         val keyAlias = "astra_doc_$documentId"
         val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
         val key = ks.getKey(keyAlias, null) as? SecretKey
@@ -146,35 +173,71 @@ class IdentityManager(private val context: Context) {
         return cipher.doFinal(data)
     }
 
-    /**
-     * Revoke remote tokens — no-op for capstone, real impl later.
-     */
-    fun revokeRemoteTokens() {
-        // No-op for capstone — no remote auth tokens to revoke
+    /** Returns all vault entries from the persisted manifest. */
+    fun getVaultEntries(): List<VaultEntry> {
+        val prefs = runCatching { getEncryptedPrefs() }.getOrNull() ?: return emptyList()
+        return prefs.all.entries
+            .filter { it.key.startsWith("vault_meta_") }
+            .mapNotNull { (key, value) ->
+                val docId = key.removePrefix("vault_meta_")
+                // Format: missionId|createdMs|fileName (limit=3 so | in filename is safe)
+                val parts = (value as? String)?.split("|", limit = 3) ?: return@mapNotNull null
+                if (parts.size < 3) return@mapNotNull null
+                VaultEntry(
+                    docId = docId,
+                    missionId = parts[0],
+                    createdMs = parts[1].toLongOrNull() ?: 0L,
+                    fileName = parts[2],
+                )
+            }
+    }
+
+    /** Delete a single vault entry from disk, cache, manifest, and Keystore. */
+    fun deleteVaultEntry(docId: String) {
+        vaultFile(docId).delete()
+        docCache.remove(docId)
+        runCatching {
+            getEncryptedPrefs().edit().remove("vault_meta_$docId").apply()
+        }
+        runCatching {
+            KeyStore.getInstance("AndroidKeyStore").apply { load(null) }.deleteEntry("astra_doc_$docId")
+        }
     }
 
     /**
-     * Wipe all identity data — clears EncryptedSharedPreferences + identity.
+     * Revoke remote tokens. The actual server DELETE is called directly by PanicViewModel
+     * before this method, so no HTTP work is needed here.
+     */
+    fun revokeRemoteTokens() {
+        // Server-side deletion is handled by PanicViewModel via serverClient.deleteUser()
+    }
+
+    /**
+     * Wipe all identity data — clears EncryptedSharedPreferences, identity keys,
+     * vault files, and Keystore aliases.
      */
     fun wipeAll() {
         val keyAlias = runCatching {
             getEncryptedPrefs().getString("hardware_key_id", null)
         }.getOrNull()
 
+        // Delete all vault files and their per-doc Keystore keys
+        val ks = runCatching { KeyStore.getInstance("AndroidKeyStore").apply { load(null) } }.getOrNull()
+        getVaultEntries().forEach { entry ->
+            vaultFile(entry.docId).delete()
+            runCatching { ks?.deleteEntry("astra_doc_${entry.docId}") }
+        }
+        vaultDir().deleteRecursively()
+        docCache.clear()
+
         context.deleteSharedPreferences("astra_identity")
 
         if (keyAlias != null) {
-            runCatching {
-                KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
-                    .deleteEntry(keyAlias)
-            }
+            runCatching { ks?.deleteEntry(keyAlias) }
         }
 
         // Remove the MasterKey so a future fresh install gets a new one
-        runCatching {
-            KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
-                .deleteEntry(MasterKey.DEFAULT_MASTER_KEY_ALIAS)
-        }
+        runCatching { ks?.deleteEntry(MasterKey.DEFAULT_MASTER_KEY_ALIAS) }
     }
 
     /**
@@ -204,6 +267,9 @@ class IdentityManager(private val context: Context) {
     }
 
     // ─── Private helpers ─────────────────────────────────────────────────────
+
+    private fun vaultDir() = File(context.filesDir, "vault")
+    private fun vaultFile(docId: String) = File(vaultDir(), "$docId.bin")
 
     private fun generateKeystoreKeyPair(alias: String) {
         val gen = KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_EC, "AndroidKeyStore")

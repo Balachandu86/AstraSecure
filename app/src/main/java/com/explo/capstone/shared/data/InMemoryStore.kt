@@ -59,7 +59,7 @@ class InMemoryStore {
 
     fun updateMessages(transform: (List<Message>) -> List<Message>) {
         _messages.value = transform(_messages.value)
-        // messages not persisted (ephemeral ciphertext; keys rotate)
+        notifyChanged()
     }
 
     fun updateDocuments(transform: (List<EncryptedDocument>) -> List<EncryptedDocument>) {

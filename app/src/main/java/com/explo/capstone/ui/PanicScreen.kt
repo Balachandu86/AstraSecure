@@ -77,7 +77,7 @@ private fun PanicStandby(onIntent: (PanicIntent) -> Unit) {
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(Modifier.size(8.dp).background(AstraTheme.Error.copy(flickerAlpha), CircleShape))
-            Text("STATUS: STANDBY  •  ENCRYPTION: AES-XTS-512", style = AstraTheme.Typography.labelSmall.copy(color = AstraTheme.Error.copy(0.7f), fontSize = 10.sp, fontFamily = FontFamily.Monospace))
+            Text("STATUS: STANDBY  •  ENCRYPTION: AES-256-GCM", style = AstraTheme.Typography.labelSmall.copy(color = AstraTheme.Error.copy(0.7f), fontSize = 10.sp, fontFamily = FontFamily.Monospace))
         }
         Spacer(Modifier.height(24.dp))
 

@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: astrasecure
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d astrasecure"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  relay:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://postgres:secret@db:5432/astrasecure
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      PORT: 3000
+      HOST: 0.0.0.0
+    ports:
+      - "3000:3000"
+
+volumes:
+  pg_data:
